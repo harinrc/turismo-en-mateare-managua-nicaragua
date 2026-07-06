@@ -363,6 +363,7 @@ function clearPlaceCoordinates(showToast = true) {
   if (showToast) {
     notify(t("msg.mapLocationCleared"), "info");
   }
+}
 
 function redrawMarkers() {
   if (!state.map) return;
