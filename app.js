@@ -1,4 +1,4 @@
-import { initialPlaces, initialServices, initialAlerts, i18n } from "../data/content.js";
+import { initialPlaces, initialServices, initialAlerts, i18n } from "./content.js";
 import { createFirebaseClient } from "./firebase.js";
 
 const STORAGE_KEYS = {
