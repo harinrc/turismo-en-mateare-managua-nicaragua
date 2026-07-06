@@ -131,6 +131,20 @@ function normalizeService(service) {
   };
 }
 
+function getCreatedAtMs(item) {
+  const createdAt = item?.createdAt;
+
+  if (!createdAt) return 0;
+  if (typeof createdAt?.toMillis === "function") return createdAt.toMillis();
+
+  const fromDate = new Date(createdAt).getTime();
+  return Number.isFinite(fromDate) ? fromDate : 0;
+}
+
+function sortByCreatedAtDesc(items) {
+  return [...items].sort((a, b) => getCreatedAtMs(b) - getCreatedAtMs(a));
+}
+
 function getVisiblePlaces() {
   return state.useFirebase
     ? state.places.filter((place) => (place.status || "approved") === "approved")
@@ -784,7 +798,7 @@ function setupFirebaseRealtime() {
     placesUnsubscribe = firebaseClient.subscribePlaces(
       { includeUnapproved },
       (places) => {
-        const normalized = places.map(normalizePlace);
+        const normalized = sortByCreatedAtDesc(places.map(normalizePlace));
         state.places = normalized.length ? normalized : [...initialPlaces].map(normalizePlace);
         refreshUiData();
       },
@@ -799,7 +813,7 @@ function setupFirebaseRealtime() {
     servicesUnsubscribe = firebaseClient.subscribeServices(
       { includeUnapproved },
       (services) => {
-        const normalized = services.map(normalizeService);
+        const normalized = sortByCreatedAtDesc(services.map(normalizeService));
         state.services = normalized.length ? normalized : [...initialServices].map(normalizeService);
         refreshUiData();
       },

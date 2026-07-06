@@ -57,13 +57,11 @@ export function createFirebaseClient() {
   const servicesAllQuery = query(collection(db, "services"), orderBy("createdAt", "desc"));
   const placesApprovedQuery = query(
     collection(db, "places"),
-    where("status", "==", "approved"),
-    orderBy("createdAt", "desc")
+    where("status", "==", "approved")
   );
   const servicesApprovedQuery = query(
     collection(db, "services"),
-    where("status", "==", "approved"),
-    orderBy("createdAt", "desc")
+    where("status", "==", "approved")
   );
 
   return {
