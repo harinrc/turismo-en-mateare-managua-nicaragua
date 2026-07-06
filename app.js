@@ -73,6 +73,7 @@ const refs = {
   editorContact: document.getElementById("editorContact"),
   editorSchedule: document.getElementById("editorSchedule"),
   editorImageUrls: document.getElementById("editorImageUrls"),
+  editorImageFiles: document.getElementById("editorImageFiles"),
   editorStatus: document.getElementById("editorStatus"),
   cancelEditorBtn: document.getElementById("cancelEditorBtn"),
   placeLat: document.getElementById("placeLat"),
@@ -642,6 +643,9 @@ function openAdminEditor(entity, itemId) {
   refs.editorName.value = source.name || "";
   refs.editorStatus.value = source.status || "pending";
   refs.editorImageUrls.value = (source.imageUrls || []).join("\n");
+  if (refs.editorImageFiles) {
+    refs.editorImageFiles.value = "";
+  }
 
   const isPlace = entity === "place";
   refs.editorCategoryLabel.hidden = !isPlace;
@@ -1047,9 +1051,31 @@ async function saveAdminChanges(event) {
   if (!entity || !itemId) return;
 
   const status = refs.editorStatus.value;
-  const imageUrls = parseImageUrlsText(refs.editorImageUrls.value);
 
   try {
+    const rawUrls = parseImageUrlsText(refs.editorImageUrls.value);
+    const validUrls = rawUrls.map((url) => {
+      if (!isValidImageUrl(url)) {
+        throw new Error("invalid-image-url");
+      }
+      return url;
+    });
+
+    const imageFiles = Array.from(refs.editorImageFiles?.files || []).filter((file) => file instanceof File && file.size > 0);
+
+    const uploadedUrls = [];
+    for (const file of imageFiles) {
+      if (state.useFirebase && state.user) {
+        const uploadedUrl = await firebaseClient.uploadPlaceImage(file, state.user.uid);
+        uploadedUrls.push(uploadedUrl);
+      } else {
+        const localUrl = await readFileAsDataUrl(file);
+        uploadedUrls.push(localUrl);
+      }
+    }
+
+    const imageUrls = [...uploadedUrls, ...validUrls];
+
     if (entity === "place") {
       const updates = {
         name: refs.editorName.value.trim(),
@@ -1092,7 +1118,8 @@ async function saveAdminChanges(event) {
     closeAdminEditor();
   } catch (error) {
     console.error("Admin edit error:", error);
-    notify(t("msg.moderationError"), "error");
+    const isInvalidImage = String(error?.message || "").includes("invalid-image-url");
+    notify(isInvalidImage ? t("msg.invalidImage") : t("msg.moderationError"), "error");
   }
 }
 
