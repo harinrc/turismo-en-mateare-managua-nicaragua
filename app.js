@@ -9,6 +9,17 @@ const STORAGE_KEYS = {
 const DEFAULT_PLACE_IMAGE =
   "https://images.unsplash.com/photo-1493244040629-496f6d136cc3?auto=format&fit=crop&w=1200&q=80";
 
+const ALERTS_MAX_ITEMS = 8;
+const ALERTS_MAX_AGE_DAYS = 14;
+const ALERTS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
+const ALERTS_SEARCH_QUERIES = [
+  "Mateare turismo Managua Nicaragua when:7d",
+  "Laguna de Xiloa Mateare turismo when:14d",
+  "Mateare emprendimientos turisticos Nicaragua when:14d",
+  "Alcaldia de Mateare turismo when:14d"
+];
+
 const firebaseClient = createFirebaseClient();
 
 const state = {
@@ -87,6 +98,7 @@ let pickerMarker = null;
 let placesUnsubscribe = null;
 let servicesUnsubscribe = null;
 let alertsRefreshTimer = null;
+let lastAlertsSyncAt = 0;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -430,10 +442,34 @@ function renderAlerts() {
   state.alerts.forEach((alert) => {
     const item = document.createElement("li");
     item.className = `alert-item ${alert.level === "high" ? "high" : ""}`;
-    const linkHtml = alert.sourceUrl
-      ? `<a class="alert-link" href="${alert.sourceUrl}" target="_blank" rel="noopener noreferrer">${t("alerts.readMore")}</a>`
-      : "";
-    item.innerHTML = `<strong>${alert.title[state.lang]}</strong><p>${alert.description[state.lang]}</p>${linkHtml}`;
+
+    const title = document.createElement("strong");
+    title.textContent = alert.title[state.lang] || alert.title.es || "";
+    item.appendChild(title);
+
+    const description = document.createElement("p");
+    description.textContent = alert.description[state.lang] || alert.description.es || "";
+    item.appendChild(description);
+
+    const relativeTime = alert.publishedAt ? formatRelativeTime(alert.publishedAt) : "";
+    const metaParts = [alert.source, relativeTime].filter(Boolean);
+    if (metaParts.length) {
+      const meta = document.createElement("small");
+      meta.className = "alert-meta";
+      meta.textContent = metaParts.join(" · ");
+      item.appendChild(meta);
+    }
+
+    if (alert.sourceUrl) {
+      const link = document.createElement("a");
+      link.className = "alert-link";
+      link.href = alert.sourceUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = t("alerts.readMore");
+      item.appendChild(link);
+    }
+
     refs.alertsList.appendChild(item);
   });
 
@@ -449,39 +485,128 @@ function truncateText(value, maxLength = 180) {
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
-async function loadMunicipalAlerts() {
+function toDateMs(value) {
+  if (!value) return 0;
+  const dateMs = new Date(value).getTime();
+  return Number.isFinite(dateMs) ? dateMs : 0;
+}
+
+function formatRelativeTime(dateValue) {
+  const dateMs = toDateMs(dateValue);
+  if (!dateMs) return "";
+
+  const diffMs = dateMs - Date.now();
+  const diffMinutes = Math.round(diffMs / (60 * 1000));
+  const absMinutes = Math.abs(diffMinutes);
+  const locale = state.lang === "en" ? "en" : "es";
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  if (absMinutes < 60) {
+    return formatter.format(diffMinutes, "minute");
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) {
+    return formatter.format(diffHours, "hour");
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return formatter.format(diffDays, "day");
+}
+
+function isRecentEntry(entryDateMs) {
+  if (!entryDateMs) return false;
+  const maxAgeMs = ALERTS_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return Date.now() - entryDateMs <= maxAgeMs;
+}
+
+function getEntrySourceLabel(entry) {
+  const author = stripHtml(entry.author || "").trim();
+  if (author) return author;
+
   try {
-    const rssUrl = encodeURIComponent(
-      "https://news.google.com/rss/search?q=Mateare+Managua+Nicaragua&hl=es-419&gl=NI&ceid=NI:es-419"
+    const hostname = new URL(entry.link).hostname.replace(/^www\./, "");
+    return hostname || "Fuente";
+  } catch {
+    return "Fuente";
+  }
+}
+
+async function fetchGoogleNewsQuery(query) {
+  const rssUrl = encodeURIComponent(
+    `https://news.google.com/rss/search?q=${query}&hl=es-419&gl=NI&ceid=NI:es-419`
+  );
+  const endpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&count=10&_t=${Date.now()}`;
+  const response = await fetch(endpoint, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error("alerts-feed-unavailable");
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.items) ? data.items : [];
+}
+
+async function loadMunicipalAlerts(options = {}) {
+  const force = options.force ?? false;
+  const now = Date.now();
+
+  if (!force && now - lastAlertsSyncAt < ALERTS_MIN_UPDATE_GAP_MS) {
+    return;
+  }
+
+  lastAlertsSyncAt = now;
+
+  try {
+    const responses = await Promise.allSettled(
+      ALERTS_SEARCH_QUERIES.map((query) => fetchGoogleNewsQuery(query))
     );
-    const endpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
-    const response = await fetch(endpoint);
 
-    if (!response.ok) {
-      throw new Error("alerts-feed-unavailable");
-    }
+    const combined = responses
+      .filter((result) => result.status === "fulfilled")
+      .flatMap((result) => result.value);
 
-    const data = await response.json();
-    const items = Array.isArray(data.items) ? data.items.slice(0, 6) : [];
+    if (!combined.length) return;
 
-    if (!items.length) return;
-
-    state.alerts = items.map((entry, index) => {
-      const cleanDescription = truncateText(stripHtml(entry.description || entry.title || ""), 180);
-      return {
-        id: `news-${index}-${entry.pubDate || Date.now()}`,
-        level: "medium",
-        title: {
-          es: entry.title,
-          en: entry.title
-        },
-        description: {
-          es: cleanDescription,
-          en: cleanDescription
-        },
-        sourceUrl: entry.link
-      };
+    const uniqueByLink = new Map();
+    combined.forEach((entry) => {
+      const key = String(entry.link || entry.guid || entry.title || "").trim();
+      if (!key || uniqueByLink.has(key)) return;
+      uniqueByLink.set(key, entry);
     });
+
+    const freshEntries = [...uniqueByLink.values()]
+      .map((entry) => ({
+        entry,
+        dateMs: toDateMs(entry.pubDate || entry.published || entry.isoDate)
+      }))
+      .filter(({ dateMs }) => isRecentEntry(dateMs))
+      .sort((a, b) => b.dateMs - a.dateMs)
+      .slice(0, ALERTS_MAX_ITEMS)
+      .map(({ entry, dateMs }, index) => {
+        const cleanTitle = stripHtml(entry.title || "Noticia local");
+        const cleanDescription = truncateText(stripHtml(entry.description || cleanTitle), 180);
+
+        return {
+          id: `news-${index}-${dateMs || Date.now()}`,
+          level: /alerta|riesgo|lluvia|cierre|accidente|incendio/i.test(cleanTitle) ? "high" : "medium",
+          title: {
+            es: cleanTitle,
+            en: cleanTitle
+          },
+          description: {
+            es: cleanDescription,
+            en: cleanDescription
+          },
+          source: getEntrySourceLabel(entry),
+          publishedAt: dateMs || null,
+          sourceUrl: entry.link
+        };
+      });
+
+    if (!freshEntries.length) return;
+
+    state.alerts = freshEntries;
 
     renderAlerts();
   } catch {
@@ -1368,10 +1493,16 @@ function setupRevealOnScroll() {
 function boot() {
   applyTranslations();
   renderAlerts();
-  loadMunicipalAlerts();
+  loadMunicipalAlerts({ force: true });
   if (!alertsRefreshTimer) {
-    alertsRefreshTimer = setInterval(loadMunicipalAlerts, 15 * 60 * 1000);
+    alertsRefreshTimer = setInterval(loadMunicipalAlerts, ALERTS_REFRESH_INTERVAL_MS);
   }
+  window.addEventListener("online", () => loadMunicipalAlerts({ force: true }));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      loadMunicipalAlerts();
+    }
+  });
   setupInteractions();
   handleForms();
   setupRevealOnScroll();

@@ -519,6 +519,13 @@ form textarea {
   overflow-wrap: anywhere;
 }
 
+.alert-meta {
+  display: block;
+  margin-top: 0.2rem;
+  color: #4d6171;
+  font-size: 0.78rem;
+}
+
 .alert-link {
   display: inline-flex;
   margin-top: 0.45rem;
