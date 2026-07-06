@@ -193,15 +193,31 @@ function sortByCreatedAtDesc(items) {
 }
 
 function getVisiblePlaces() {
-  return state.useFirebase
-    ? state.places.filter((place) => (place.status || "approved") === "approved")
-    : state.places;
+  if (!state.useFirebase) {
+    return state.places;
+  }
+
+  const currentUserUid = state.user?.uid;
+  return state.places.filter((place) => {
+    const status = place.status || "approved";
+    return status === "approved" || (status === "pending" && place.createdByUid && place.createdByUid === currentUserUid);
+  });
 }
 
 function getVisibleServices() {
-  return state.useFirebase
-    ? state.services.filter((service) => (service.status || "approved") === "approved")
-    : state.services;
+  if (!state.useFirebase) {
+    return state.services;
+  }
+
+  const currentUserUid = state.user?.uid;
+  return state.services.filter((service) => {
+    const status = service.status || "approved";
+    return status === "approved" || (status === "pending" && service.createdByUid && service.createdByUid === currentUserUid);
+  });
+}
+
+function shouldShowCommunityStatus(item) {
+  return state.useFirebase && item.status && item.status !== "approved";
 }
 
 function getPendingPlaces() {
@@ -391,7 +407,10 @@ function renderCommunityFeed() {
         ? buildFadeSlideshow(item.imageUrls, item.title, "feed-thumb")
         : "";
       const contactLine = item.contact ? `<p class="feed-contact">${t("publish.contact")}: ${item.contact}</p>` : "";
-      card.innerHTML = `<strong>${item.type}</strong><h4>${item.title}</h4><p>${item.meta}</p>${contactLine}${maybeImage}`;
+      const statusLine = shouldShowCommunityStatus(item)
+        ? `<p class="feed-status"><span class="status-pill ${item.status}">${getStatusLabel(item.status)}</span></p>`
+        : "";
+      card.innerHTML = `<strong>${item.type}</strong><h4>${item.title}</h4><p>${item.meta}</p>${statusLine}${contactLine}${maybeImage}`;
       refs.communityFeed.appendChild(card);
     });
 
