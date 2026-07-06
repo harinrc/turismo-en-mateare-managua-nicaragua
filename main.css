@@ -10,7 +10,7 @@
   --danger: #c03221;
   --radius: 1.1rem;
   --shadow: 0 18px 38px rgba(18, 32, 46, 0.12);
-  --container: min(1120px, 92vw);
+  --container: min(1120px, calc(100vw - 1.5rem));
 }
 
 * {
@@ -466,6 +466,7 @@ form textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  align-items: start;
 }
 
 .weather-controls {
@@ -506,6 +507,16 @@ form textarea {
 
 .alert-item.high {
   border-left-color: var(--danger);
+}
+
+.alert-item,
+.weather-box,
+.alerts-list {
+  min-width: 0;
+}
+
+.alert-item {
+  overflow-wrap: anywhere;
 }
 
 .alert-link {
@@ -779,6 +790,26 @@ form textarea {
   }
 }
 
+@media (max-width: 1100px) {
+  .topbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 0.55rem;
+  }
+
+  .auth-box {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 820px) {
   .menu-btn {
     display: block;
@@ -790,7 +821,7 @@ form textarea {
     left: 0;
     right: 0;
     margin: 0 auto;
-    width: min(96vw, 560px);
+    width: min(100%, 560px);
     border-radius: 1rem;
     background: rgba(15, 42, 61, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.09);
@@ -812,6 +843,7 @@ form textarea {
     font-size: 0.85rem;
   }
 
+  .nav a,
   .lang-select {
     width: 100%;
   }
@@ -819,6 +851,7 @@ form textarea {
   .auth-box {
     width: 100%;
     justify-content: space-between;
+    gap: 0.5rem;
   }
 
   .topbar {
@@ -831,10 +864,26 @@ form textarea {
     margin: 2.1rem auto;
   }
 
+  .topbar {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .brand {
+    max-width: 100%;
+  }
+
   .toast {
     left: 0.75rem;
     right: 0.75rem;
     max-width: unset;
+  }
+
+  .weather-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-controls button {
+    width: 100%;
   }
 
   .row-2 {
