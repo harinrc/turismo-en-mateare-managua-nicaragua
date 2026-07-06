@@ -45,8 +45,11 @@ const refs = {
   authUser: document.getElementById("authUser"),
   signInBtn: document.getElementById("signInBtn"),
   signOutBtn: document.getElementById("signOutBtn"),
-  authNotice: document.getElementById("authNotice")
+  authNotice: document.getElementById("authNotice"),
+  toastRegion: document.getElementById("toastRegion")
 };
+
+let toastTimer = null;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -425,9 +428,27 @@ function getSignInErrorMessage(error) {
   return code ? `${t("msg.signInError")} (${code})` : t("msg.signInError");
 }
 
+function notify(message, type = "info") {
+  if (!refs.toastRegion) {
+    alert(message);
+    return;
+  }
+
+  refs.toastRegion.textContent = message;
+  refs.toastRegion.className = `toast show ${type}`;
+
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+  }
+
+  toastTimer = setTimeout(() => {
+    refs.toastRegion.classList.remove("show");
+  }, 3200);
+}
+
 async function publishPlace(data) {
   if (state.useFirebase && !state.user) {
-    alert(t("msg.signInRequired"));
+    notify(t("msg.signInRequired"), "error");
     return;
   }
 
@@ -436,7 +457,7 @@ async function publishPlace(data) {
   try {
     imageUrl = await resolvePlaceImage(data);
   } catch {
-    alert(t("msg.invalidImage"));
+    notify(t("msg.invalidImage"), "error");
     return;
   }
 
@@ -451,22 +472,28 @@ async function publishPlace(data) {
     createdByName: state.user?.displayName ?? "local"
   };
 
-  if (state.useFirebase) {
-    await firebaseClient.addPlace(payload);
-  } else {
-    state.places = [{ id: crypto.randomUUID(), ...payload }, ...state.places];
-    saveToStorage();
-    refreshUiData();
+  try {
+    if (state.useFirebase) {
+      await firebaseClient.addPlace(payload);
+    } else {
+      state.places = [{ id: crypto.randomUUID(), ...payload }, ...state.places];
+      saveToStorage();
+      refreshUiData();
+    }
+  } catch (error) {
+    console.error("Publish place error:", error);
+    notify(t("msg.placeSaveError"), "error");
+    return;
   }
 
   refs.placeForm.reset();
   setPlacePreview("");
-  alert(t("msg.placeSaved"));
+  notify(t("msg.placeSaved"), "success");
 }
 
 async function publishService(data) {
   if (state.useFirebase && !state.user) {
-    alert(t("msg.signInRequired"));
+    notify(t("msg.signInRequired"), "error");
     return;
   }
 
@@ -478,16 +505,22 @@ async function publishService(data) {
     createdByName: state.user?.displayName ?? "local"
   };
 
-  if (state.useFirebase) {
-    await firebaseClient.addService(payload);
-  } else {
-    state.services = [{ id: crypto.randomUUID(), ...payload }, ...state.services];
-    saveToStorage();
-    refreshUiData();
+  try {
+    if (state.useFirebase) {
+      await firebaseClient.addService(payload);
+    } else {
+      state.services = [{ id: crypto.randomUUID(), ...payload }, ...state.services];
+      saveToStorage();
+      refreshUiData();
+    }
+  } catch (error) {
+    console.error("Publish service error:", error);
+    notify(t("msg.serviceSaveError"), "error");
+    return;
   }
 
   refs.serviceForm.reset();
-  alert(t("msg.serviceSaved"));
+  notify(t("msg.serviceSaved"), "success");
 }
 
 function handleForms() {
@@ -612,7 +645,7 @@ function setupInteractions() {
       await firebaseClient.signInWithGoogle();
     } catch (error) {
       console.error("Google sign-in error:", error);
-      alert(getSignInErrorMessage(error));
+      notify(getSignInErrorMessage(error), "error");
     }
   });
 
