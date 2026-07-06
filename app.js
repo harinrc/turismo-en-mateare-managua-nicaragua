@@ -486,6 +486,8 @@ function setupFirebaseRealtime() {
       refreshUiData();
     },
     () => {
+      state.places = [...initialPlaces];
+      refreshUiData();
       refs.authNotice.textContent = t("msg.firebaseLoadError");
       refs.authNotice.classList.remove("ok");
     }
@@ -497,6 +499,8 @@ function setupFirebaseRealtime() {
       refreshUiData();
     },
     () => {
+      state.services = [...initialServices];
+      refreshUiData();
       refs.authNotice.textContent = t("msg.firebaseLoadError");
       refs.authNotice.classList.remove("ok");
     }
@@ -614,6 +618,8 @@ function boot() {
   handleForms();
   setupRevealOnScroll();
   initMap();
+  // Render base content immediately so the UI is visible even before realtime sync.
+  refreshUiData();
 
   if (state.useFirebase) {
     setupFirebaseRealtime();
