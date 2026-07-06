@@ -533,10 +533,10 @@ function getEntrySourceLabel(entry) {
 }
 
 async function fetchGoogleNewsQuery(query) {
-  const rssUrl = encodeURIComponent(
-    `https://news.google.com/rss/search?q=${query}&hl=es-419&gl=NI&ceid=NI:es-419`
-  );
-  const endpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&count=10&_t=${Date.now()}`;
+  const encodedQuery = encodeURIComponent(query);
+  const googleRssUrl = `https://news.google.com/rss/search?q=${encodedQuery}&hl=es-419&gl=NI&ceid=NI:es-419`;
+  const rssUrl = encodeURIComponent(googleRssUrl);
+  const endpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&_t=${Date.now()}`;
   const response = await fetch(endpoint, { cache: "no-store" });
 
   if (!response.ok) {
@@ -544,7 +544,28 @@ async function fetchGoogleNewsQuery(query) {
   }
 
   const data = await response.json();
-  return Array.isArray(data.items) ? data.items : [];
+  if (data?.status === "ok" && Array.isArray(data.items)) {
+    return data.items;
+  }
+
+  const fallbackEndpoint = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleRssUrl)}`;
+  const fallbackResponse = await fetch(fallbackEndpoint, { cache: "no-store" });
+
+  if (!fallbackResponse.ok) {
+    throw new Error("alerts-feed-unavailable");
+  }
+
+  const xmlText = await fallbackResponse.text();
+  const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
+  const xmlItems = [...xmlDoc.querySelectorAll("item")];
+
+  return xmlItems.map((item) => ({
+    title: item.querySelector("title")?.textContent || "",
+    description: item.querySelector("description")?.textContent || "",
+    link: item.querySelector("link")?.textContent || "",
+    pubDate: item.querySelector("pubDate")?.textContent || "",
+    author: item.querySelector("source")?.textContent || ""
+  }));
 }
 
 async function loadMunicipalAlerts(options = {}) {

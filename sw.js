@@ -1,4 +1,4 @@
-const CACHE_NAME = "mateare-vivo-v2";
+const CACHE_NAME = "mateare-vivo-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
