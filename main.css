@@ -826,6 +826,8 @@ form textarea {
     background: rgba(15, 42, 61, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.09);
     display: grid;
+    justify-items: stretch;
+    align-items: start;
     gap: 0.7rem;
     padding: 1rem;
     transform: translateY(-10px);
@@ -840,7 +842,11 @@ form textarea {
   }
 
   .nav a {
+    display: block;
     font-size: 0.85rem;
+    text-align: left;
+    line-height: 1.35;
+    padding: 0.12rem 0;
   }
 
   .nav a,
@@ -850,8 +856,20 @@ form textarea {
 
   .auth-box {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  .auth-user {
+    width: 100%;
+    max-width: none;
+  }
+
+  .auth-btn {
+    flex: 1 1 10rem;
+    min-height: 2rem;
   }
 
   .topbar {
