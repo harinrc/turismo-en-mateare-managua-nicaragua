@@ -254,7 +254,8 @@ async function resolveImages(data, options) {
   const {
     fileField,
     urlField,
-    fallbackImage = null
+    fallbackImage = null,
+    uploadFolder = "places"
   } = options;
 
   const files = data
@@ -272,8 +273,14 @@ async function resolveImages(data, options) {
   const uploadedUrls = [];
   for (const file of files) {
     if (state.useFirebase && state.user) {
-      const uploadedUrl = await firebaseClient.uploadPlaceImage(file, state.user.uid);
-      uploadedUrls.push(uploadedUrl);
+      try {
+        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
+        uploadedUrls.push(uploadedUrl);
+      } catch (error) {
+        const wrapped = new Error("image-upload-failed");
+        wrapped.cause = error;
+        throw wrapped;
+      }
     } else {
       const localUrl = await readFileAsDataUrl(file);
       uploadedUrls.push(localUrl);
@@ -901,10 +908,12 @@ async function publishPlace(data) {
     imageUrls = await resolveImages(data, {
       fileField: "imageFiles",
       urlField: "imageUrls",
-      fallbackImage: DEFAULT_PLACE_IMAGE
+      fallbackImage: DEFAULT_PLACE_IMAGE,
+      uploadFolder: "places"
     });
-  } catch {
-    notify(t("msg.invalidImage"), "error");
+  } catch (error) {
+    const message = String(error?.message || "");
+    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.imageUploadError"), "error");
     return;
   }
 
@@ -960,10 +969,12 @@ async function publishService(data) {
   try {
     imageUrls = await resolveImages(data, {
       fileField: "imageFiles",
-      urlField: "imageUrls"
+      urlField: "imageUrls",
+      uploadFolder: "services"
     });
-  } catch {
-    notify(t("msg.invalidImage"), "error");
+  } catch (error) {
+    const message = String(error?.message || "");
+    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.imageUploadError"), "error");
     return;
   }
 
@@ -1066,7 +1077,7 @@ async function saveAdminChanges(event) {
     const uploadedUrls = [];
     for (const file of imageFiles) {
       if (state.useFirebase && state.user) {
-        const uploadedUrl = await firebaseClient.uploadPlaceImage(file, state.user.uid);
+        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, entity === "service" ? "services" : "places");
         uploadedUrls.push(uploadedUrl);
       } else {
         const localUrl = await readFileAsDataUrl(file);
@@ -1118,8 +1129,16 @@ async function saveAdminChanges(event) {
     closeAdminEditor();
   } catch (error) {
     console.error("Admin edit error:", error);
-    const isInvalidImage = String(error?.message || "").includes("invalid-image-url");
-    notify(isInvalidImage ? t("msg.invalidImage") : t("msg.moderationError"), "error");
+    const message = String(error?.message || "");
+    if (message.includes("invalid-image-url")) {
+      notify(t("msg.invalidImage"), "error");
+      return;
+    }
+    if (message.includes("image-upload-failed")) {
+      notify(t("msg.imageUploadError"), "error");
+      return;
+    }
+    notify(t("msg.moderationError"), "error");
   }
 }
 

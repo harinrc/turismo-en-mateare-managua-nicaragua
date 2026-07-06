@@ -114,11 +114,19 @@ export function createFirebaseClient() {
       );
     },
 
-    async uploadPlaceImage(file, uid) {
-      const path = `places/${uid}/${Date.now()}-${file.name}`;
+    async uploadImage(file, uid, folder = "places") {
+      const safeFolder = folder === "services" ? "services" : "places";
+      const uniqueId = typeof crypto?.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      const path = `${safeFolder}/${uid}/${uniqueId}-${file.name}`;
       const imageRef = ref(storage, path);
       await uploadBytes(imageRef, file);
       return getDownloadURL(imageRef);
+    },
+
+    async uploadPlaceImage(file, uid) {
+      return this.uploadImage(file, uid, "places");
     },
 
     async addPlace(place) {
