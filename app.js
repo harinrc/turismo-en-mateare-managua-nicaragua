@@ -399,6 +399,32 @@ function updateAuthUI() {
   setFormsEnabled(false);
 }
 
+function getSignInErrorMessage(error) {
+  const code = String(error?.code || "");
+
+  if (code === "auth/unauthorized-domain") {
+    return t("msg.signInBlockedDomain");
+  }
+
+  if (code === "auth/popup-blocked") {
+    return t("msg.signInPopupBlocked");
+  }
+
+  if (code === "auth/popup-closed-by-user") {
+    return t("msg.signInPopupClosed");
+  }
+
+  if (code === "auth/operation-not-allowed") {
+    return t("msg.signInOperationDisabled");
+  }
+
+  if (code === "auth/network-request-failed") {
+    return t("msg.signInNetworkError");
+  }
+
+  return code ? `${t("msg.signInError")} (${code})` : t("msg.signInError");
+}
+
 async function publishPlace(data) {
   if (state.useFirebase && !state.user) {
     alert(t("msg.signInRequired"));
@@ -584,8 +610,9 @@ function setupInteractions() {
   refs.signInBtn?.addEventListener("click", async () => {
     try {
       await firebaseClient.signInWithGoogle();
-    } catch {
-      alert(t("msg.signInError"));
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      alert(getSignInErrorMessage(error));
     }
   });
 

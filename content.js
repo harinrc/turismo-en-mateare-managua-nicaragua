@@ -163,7 +163,12 @@ export const i18n = {
     "msg.realtimeSync": "Actualizacion en tiempo real recibida.",
     "msg.signInRequired": "Debes iniciar sesion con Google para publicar.",
     "msg.firebaseLoadError": "No fue posible cargar datos en tiempo real.",
-    "msg.signInError": "No se pudo iniciar sesion con Google."
+    "msg.signInError": "No se pudo iniciar sesion con Google.",
+    "msg.signInBlockedDomain": "Este dominio no esta autorizado en Firebase Auth. Agrega harinrc.github.io en Authorized domains.",
+    "msg.signInPopupBlocked": "El navegador bloqueo la ventana emergente de Google. Permite popups e intenta de nuevo.",
+    "msg.signInPopupClosed": "Cerraste la ventana de inicio de sesion antes de completar el proceso.",
+    "msg.signInOperationDisabled": "Google Sign-In no esta habilitado en Firebase Authentication.",
+    "msg.signInNetworkError": "Error de red al iniciar sesion. Verifica conexion e intenta otra vez."
   },
   en: {
     "nav.home": "Home",
@@ -252,6 +257,11 @@ export const i18n = {
     "msg.realtimeSync": "Real-time update received.",
     "msg.signInRequired": "You must sign in with Google to publish.",
     "msg.firebaseLoadError": "Real-time data could not be loaded.",
-    "msg.signInError": "Google sign-in failed."
+    "msg.signInError": "Google sign-in failed.",
+    "msg.signInBlockedDomain": "This domain is not authorized in Firebase Auth. Add harinrc.github.io to Authorized domains.",
+    "msg.signInPopupBlocked": "The browser blocked the Google popup. Allow popups and try again.",
+    "msg.signInPopupClosed": "You closed the sign-in popup before completing the process.",
+    "msg.signInOperationDisabled": "Google Sign-In is not enabled in Firebase Authentication.",
+    "msg.signInNetworkError": "Network error while signing in. Check your connection and try again."
   }
 };

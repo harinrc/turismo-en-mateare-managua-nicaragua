@@ -4,12 +4,13 @@
 1. Entra a https://console.firebase.google.com
 2. Crea un proyecto nuevo.
 3. En Project settings > General > Your apps, registra una app Web.
-4. Copia la configuracion SDK y pegala en [scripts/firebase-config.js](scripts/firebase-config.js).
+4. Copia la configuracion SDK y pegala en [firebase-config.js](firebase-config.js).
 
 ## 2) Activar login con Google
 1. Ve a Authentication > Sign-in method.
 2. Habilita Google.
 3. En Authentication > Settings > Authorized domains, agrega tu dominio (o localhost en pruebas).
+4. Para este proyecto en GitHub Pages, agrega especificamente: harinrc.github.io
 
 ## 3) Activar base de datos en tiempo real (Firestore)
 1. Ve a Firestore Database > Create database.
@@ -90,4 +91,4 @@ service firebase.storage {
 - Si no aparece login de Google: revisa Authentication > Sign-in method y dominios autorizados.
 - Si falla la carga de imagen: revisa Storage rules y que storageBucket sea correcto.
 - Si no aparecen datos en vivo: revisa Firestore rules y que exista la coleccion.
-- Si la app queda en modo local: revisa que todos los campos de [scripts/firebase-config.js](scripts/firebase-config.js) esten completos.
+- Si la app queda en modo local: revisa que todos los campos de [firebase-config.js](firebase-config.js) esten completos.
