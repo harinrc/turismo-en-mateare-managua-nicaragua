@@ -43,6 +43,7 @@ const refs = {
   mainNav: document.getElementById("mainNav"),
   languageSelect: document.getElementById("languageSelect"),
   placeImageFile: document.getElementById("placeImageFile"),
+  serviceImageFile: document.getElementById("serviceImageFile"),
   placeImagePreview: document.getElementById("placeImagePreview"),
   authUser: document.getElementById("authUser"),
   signInBtn: document.getElementById("signInBtn"),
@@ -103,6 +104,18 @@ function readFileAsDataUrl(file) {
 }
 
 function normalizePlace(place) {
+  const imageUrls = Array.isArray(place.imageUrls)
+    ? place.imageUrls.filter((url) => typeof url === "string" && url)
+    : [];
+
+  if (!imageUrls.length && place.imageUrl) {
+    imageUrls.push(place.imageUrl);
+  }
+
+  if (!imageUrls.length) {
+    imageUrls.push(DEFAULT_PLACE_IMAGE);
+  }
+
   return {
     id: place.id,
     name: place.name,
@@ -110,7 +123,8 @@ function normalizePlace(place) {
     description: place.description,
     lat: Number(place.lat),
     lng: Number(place.lng),
-    imageUrl: place.imageUrl || DEFAULT_PLACE_IMAGE,
+    imageUrls,
+    imageUrl: imageUrls[0],
     tags: Array.isArray(place.tags) ? place.tags : ["Comunitario"],
     status: place.status || "approved",
     createdByName: place.createdByName || "Comunidad",
@@ -119,12 +133,22 @@ function normalizePlace(place) {
 }
 
 function normalizeService(service) {
+  const imageUrls = Array.isArray(service.imageUrls)
+    ? service.imageUrls.filter((url) => typeof url === "string" && url)
+    : [];
+
+  if (!imageUrls.length && service.imageUrl) {
+    imageUrls.push(service.imageUrl);
+  }
+
   return {
     id: service.id,
     name: service.name,
     type: service.type,
     contact: service.contact,
     schedule: service.schedule,
+    imageUrls,
+    imageUrl: imageUrls[0] || "",
     status: service.status || "approved",
     createdByName: service.createdByName || "Comunidad",
     createdByUid: service.createdByUid || null
@@ -178,25 +202,67 @@ function setPlacePreview(src) {
   refs.placeImagePreview.hidden = false;
 }
 
-async function resolvePlaceImage(data) {
-  const file = data.get("imageFile");
-  const imageUrl = String(data.get("imageUrl") || "").trim();
+function parseImageUrlsText(value) {
+  if (!value) return [];
+  return value
+    .split(/\r?\n|,|;/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
-  if (file instanceof File && file.size > 0) {
-    if (state.useFirebase && state.user) {
-      return firebaseClient.uploadPlaceImage(file, state.user.uid);
-    }
-    return readFileAsDataUrl(file);
-  }
+function buildFadeSlideshow(images, altText, className = "") {
+  const validImages = images.length ? images : [DEFAULT_PLACE_IMAGE];
+  const count = validImages.length;
+  const totalDuration = Math.max(count * 4, 8);
+  const boxClass = count > 1 ? "fade-slideshow" : "fade-slideshow single";
+  const extraClass = className ? ` ${className}` : "";
 
-  if (imageUrl) {
-    if (!isValidImageUrl(imageUrl)) {
+  const slides = validImages
+    .map(
+      (url, index) =>
+        `<img class="fade-slide" src="${url}" alt="${altText}" loading="lazy" style="animation-delay:${index * 4}s;">`
+    )
+    .join("");
+
+  return `<div class="${boxClass}${extraClass}" style="--slide-duration:${totalDuration}s;">${slides}</div>`;
+}
+
+async function resolveImages(data, options) {
+  const {
+    fileField,
+    urlField,
+    fallbackImage = null
+  } = options;
+
+  const files = data
+    .getAll(fileField)
+    .filter((entry) => entry instanceof File && entry.size > 0);
+
+  const rawUrls = parseImageUrlsText(String(data.get(urlField) || ""));
+  const validUrls = rawUrls.map((url) => {
+    if (!isValidImageUrl(url)) {
       throw new Error("invalid-image-url");
     }
-    return imageUrl;
+    return url;
+  });
+
+  const uploadedUrls = [];
+  for (const file of files) {
+    if (state.useFirebase && state.user) {
+      const uploadedUrl = await firebaseClient.uploadPlaceImage(file, state.user.uid);
+      uploadedUrls.push(uploadedUrl);
+    } else {
+      const localUrl = await readFileAsDataUrl(file);
+      uploadedUrls.push(localUrl);
+    }
   }
 
-  return DEFAULT_PLACE_IMAGE;
+  const allUrls = [...uploadedUrls, ...validUrls];
+  if (!allUrls.length && fallbackImage) {
+    allUrls.push(fallbackImage);
+  }
+
+  return allUrls;
 }
 
 function applyTranslations() {
@@ -244,9 +310,10 @@ function renderGuides() {
     card.className = "card place-card";
 
     const tags = (place.tags ?? []).map((tag) => `<span class="badge">${tag}</span>`).join("");
+    const gallery = buildFadeSlideshow(place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE], place.name);
 
     card.innerHTML = `
-      <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}" loading="lazy">
+      ${gallery}
       <h3>${place.name}</h3>
       <p>${place.description}</p>
       <div class="badges">
@@ -273,13 +340,16 @@ function renderCommunityFeed() {
     type: t("feed.place"),
     title: place.name,
     meta: formatCategory(place.category),
-    imageUrl: place.imageUrl || DEFAULT_PLACE_IMAGE
+    contact: "",
+    imageUrls: place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE]
   }));
 
   const serviceItems = visibleServices.slice(0, 4).map((service) => ({
     type: t("feed.service"),
     title: service.name,
-    meta: `${service.type} · ${service.schedule}`
+    meta: `${service.type} · ${service.schedule}`,
+    contact: service.contact || "",
+    imageUrls: service.imageUrls || []
   }));
 
   [...placeItems, ...serviceItems]
@@ -287,11 +357,11 @@ function renderCommunityFeed() {
     .forEach((item) => {
       const card = document.createElement("article");
       card.className = "feed-card";
-      const maybeImage =
-        "imageUrl" in item
-          ? `<img class="feed-thumb" src="${item.imageUrl}" alt="${item.title}" loading="lazy">`
-          : "";
-      card.innerHTML = `<strong>${item.type}</strong><h4>${item.title}</h4><p>${item.meta}</p>${maybeImage}`;
+      const maybeImage = item.imageUrls?.length
+        ? buildFadeSlideshow(item.imageUrls, item.title, "feed-thumb")
+        : "";
+      const contactLine = item.contact ? `<p class="feed-contact">${t("publish.contact")}: ${item.contact}</p>` : "";
+      card.innerHTML = `<strong>${item.type}</strong><h4>${item.title}</h4><p>${item.meta}</p>${contactLine}${maybeImage}`;
       refs.communityFeed.appendChild(card);
     });
 
@@ -311,11 +381,63 @@ function renderAlerts() {
   state.alerts.forEach((alert) => {
     const item = document.createElement("li");
     item.className = `alert-item ${alert.level === "high" ? "high" : ""}`;
-    item.innerHTML = `<strong>${alert.title[state.lang]}</strong><p>${alert.description[state.lang]}</p>`;
+    const linkHtml = alert.sourceUrl
+      ? `<a class="alert-link" href="${alert.sourceUrl}" target="_blank" rel="noopener noreferrer">${t("alerts.readMore")}</a>`
+      : "";
+    item.innerHTML = `<strong>${alert.title[state.lang]}</strong><p>${alert.description[state.lang]}</p>${linkHtml}`;
     refs.alertsList.appendChild(item);
   });
 
   refs.quickAlerts.textContent = String(state.alerts.length);
+}
+
+function stripHtml(value) {
+  return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function truncateText(value, maxLength = 180) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
+async function loadMunicipalAlerts() {
+  try {
+    const rssUrl = encodeURIComponent(
+      "https://news.google.com/rss/search?q=Mateare+Managua+Nicaragua&hl=es-419&gl=NI&ceid=NI:es-419"
+    );
+    const endpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+      throw new Error("alerts-feed-unavailable");
+    }
+
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items.slice(0, 6) : [];
+
+    if (!items.length) return;
+
+    state.alerts = items.map((entry, index) => {
+      const cleanDescription = truncateText(stripHtml(entry.description || entry.title || ""), 180);
+      return {
+        id: `news-${index}-${entry.pubDate || Date.now()}`,
+        level: "medium",
+        title: {
+          es: entry.title,
+          en: entry.title
+        },
+        description: {
+          es: cleanDescription,
+          en: cleanDescription
+        },
+        sourceUrl: entry.link
+      };
+    });
+
+    renderAlerts();
+  } catch {
+    // Keep static fallback alerts when external sources are unavailable.
+  }
 }
 
 function initMap() {
@@ -518,6 +640,7 @@ function renderModerationPanel() {
     item.innerHTML = `
       <h4>${service.name}</h4>
       <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
+      <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
       <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
       <div class="moderation-actions">
         <button class="btn btn-primary" data-entity="service" data-id="${service.id}" data-action="approve">${t("admin.approve")}</button>
@@ -650,10 +773,14 @@ async function publishPlace(data) {
     return;
   }
 
-  let imageUrl = DEFAULT_PLACE_IMAGE;
+  let imageUrls = [DEFAULT_PLACE_IMAGE];
 
   try {
-    imageUrl = await resolvePlaceImage(data);
+    imageUrls = await resolveImages(data, {
+      fileField: "imageFiles",
+      urlField: "imageUrls",
+      fallbackImage: DEFAULT_PLACE_IMAGE
+    });
   } catch {
     notify(t("msg.invalidImage"), "error");
     return;
@@ -665,7 +792,8 @@ async function publishPlace(data) {
     description: String(data.get("description")),
     lat: Number(data.get("lat")),
     lng: Number(data.get("lng")),
-    imageUrl,
+    imageUrls,
+    imageUrl: imageUrls[0],
     status: state.useFirebase ? "pending" : "approved",
     tags: ["Comunitario"],
     createdByName: state.user?.displayName ?? "local",
@@ -705,11 +833,25 @@ async function publishService(data) {
     return;
   }
 
+  let imageUrls = [];
+
+  try {
+    imageUrls = await resolveImages(data, {
+      fileField: "imageFiles",
+      urlField: "imageUrls"
+    });
+  } catch {
+    notify(t("msg.invalidImage"), "error");
+    return;
+  }
+
   const payload = {
     name: String(data.get("name")),
     type: String(data.get("type")),
     contact: String(data.get("contact")),
     schedule: String(data.get("schedule")),
+    imageUrls,
+    imageUrl: imageUrls[0] || "",
     status: state.useFirebase ? "pending" : "approved",
     createdByName: state.user?.displayName ?? "local",
     createdByUid: state.user?.uid ?? "local"
@@ -898,11 +1040,11 @@ function setupInteractions() {
     }, 0);
   });
 
-  if (refs.placeForm.elements.imageUrl) {
-    refs.placeForm.elements.imageUrl.addEventListener("input", (event) => {
+  if (refs.placeForm.elements.imageUrls) {
+    refs.placeForm.elements.imageUrls.addEventListener("input", (event) => {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement)) return;
-      const value = input.value.trim();
+      if (!(input instanceof HTMLTextAreaElement)) return;
+      const value = parseImageUrlsText(input.value)[0] || "";
       setPlacePreview(value || "");
     });
   }
@@ -973,6 +1115,7 @@ function setupRevealOnScroll() {
 function boot() {
   applyTranslations();
   renderAlerts();
+  loadMunicipalAlerts();
   setupInteractions();
   handleForms();
   setupRevealOnScroll();

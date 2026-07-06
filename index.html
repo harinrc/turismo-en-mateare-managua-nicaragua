@@ -174,12 +174,12 @@
             <textarea required name="description" rows="3" maxlength="220"></textarea>
           </label>
           <label>
-            <span data-i18n="publish.placeImageUrl">URL de imagen (opcional)</span>
-            <input name="imageUrl" type="url" placeholder="https://..." data-i18n-placeholder="publish.placeImageUrlPlaceholder">
+            <span data-i18n="publish.placeImageUrls">URLs de imagen (opcional)</span>
+            <textarea name="imageUrls" rows="2" placeholder="https://..." data-i18n-placeholder="publish.placeImageUrlsPlaceholder"></textarea>
           </label>
           <label>
-            <span data-i18n="publish.placeImageFile">Subir imagen (opcional)</span>
-            <input id="placeImageFile" name="imageFile" type="file" accept="image/*">
+            <span data-i18n="publish.placeImageFiles">Subir imágenes (opcional)</span>
+            <input id="placeImageFile" name="imageFiles" type="file" accept="image/*" multiple>
           </label>
           <img id="placeImagePreview" class="place-image-preview" src="" alt="Vista previa" hidden>
           <div class="location-picker-row">
@@ -221,6 +221,14 @@
           <label>
             <span data-i18n="publish.schedule">Horario</span>
             <input required name="schedule" type="text" maxlength="60">
+          </label>
+          <label>
+            <span data-i18n="publish.serviceImageUrls">URLs de imagen (opcional)</span>
+            <textarea name="imageUrls" rows="2" placeholder="https://..." data-i18n-placeholder="publish.serviceImageUrlsPlaceholder"></textarea>
+          </label>
+          <label>
+            <span data-i18n="publish.serviceImageFiles">Subir imágenes (opcional)</span>
+            <input id="serviceImageFile" name="imageFiles" type="file" accept="image/*" multiple>
           </label>
           <button class="btn btn-primary" type="submit" data-i18n="publish.publishService">Publicar servicio</button>
         </form>

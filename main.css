@@ -392,6 +392,34 @@ form textarea {
   gap: 0.65rem;
 }
 
+.fade-slideshow {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(18, 32, 46, 0.12);
+  overflow: hidden;
+  background: #e5e8eb;
+}
+
+.fade-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  animation-name: fadeCycle;
+  animation-duration: var(--slide-duration, 8s);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.fade-slideshow.single .fade-slide {
+  opacity: 1;
+  animation: none;
+}
+
 .place-image {
   width: 100%;
   height: 170px;
@@ -480,6 +508,15 @@ form textarea {
   border-left-color: var(--danger);
 }
 
+.alert-link {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  font-size: 0.83rem;
+  color: #0e5f91;
+  text-decoration: underline;
+  text-underline-offset: 0.12rem;
+}
+
 .row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -507,6 +544,17 @@ form textarea {
   border: 1px solid rgba(18, 32, 46, 0.1);
   border-radius: 0.8rem;
   padding: 0.8rem;
+}
+
+.feed-card p {
+  margin: 0.35rem 0;
+}
+
+.feed-contact {
+  margin: 0;
+  color: #29566f;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .feed-thumb {
@@ -638,6 +686,24 @@ form textarea {
   }
   100% {
     transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fadeCycle {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  38% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
