@@ -10,6 +10,9 @@ import {
   getFirestore,
   collection,
   addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
   query,
   orderBy,
   onSnapshot,
@@ -115,6 +118,56 @@ export function createFirebaseClient() {
         ...service,
         createdAt: serverTimestamp()
       });
+    },
+
+    async updatePlaceStatus(placeId, status, moderatedByUid) {
+      const placeRef = doc(db, "places", placeId);
+      const payload = {
+        status,
+        moderatedByUid,
+        moderatedAt: serverTimestamp()
+      };
+
+      if (status === "approved") {
+        payload.approvedByUid = moderatedByUid;
+        payload.approvedAt = serverTimestamp();
+      }
+
+      if (status === "rejected") {
+        payload.rejectedByUid = moderatedByUid;
+        payload.rejectedAt = serverTimestamp();
+      }
+
+      return updateDoc(placeRef, payload);
+    },
+
+    async updateServiceStatus(serviceId, status, moderatedByUid) {
+      const serviceRef = doc(db, "services", serviceId);
+      const payload = {
+        status,
+        moderatedByUid,
+        moderatedAt: serverTimestamp()
+      };
+
+      if (status === "approved") {
+        payload.approvedByUid = moderatedByUid;
+        payload.approvedAt = serverTimestamp();
+      }
+
+      if (status === "rejected") {
+        payload.rejectedByUid = moderatedByUid;
+        payload.rejectedAt = serverTimestamp();
+      }
+
+      return updateDoc(serviceRef, payload);
+    },
+
+    async deletePlace(placeId) {
+      return deleteDoc(doc(db, "places", placeId));
+    },
+
+    async deleteService(serviceId) {
+      return deleteDoc(doc(db, "services", serviceId));
     }
   };
 }

@@ -34,6 +34,7 @@
       <a href="#guias" data-i18n="nav.guides">Guías</a>
       <a href="#registro" data-i18n="nav.register">Publicar</a>
       <a href="#mapa" data-i18n="nav.map">Mapa y Rutas</a>
+      <a href="#moderacion" id="navModeration" data-i18n="nav.moderation" hidden>Moderación</a>
       <a href="#contacto" data-i18n="nav.contact">Contacto</a>
       <div class="auth-box" aria-live="polite">
         <span id="authUser" class="auth-user" data-i18n="auth.guest">Invitado</span>
@@ -233,6 +234,26 @@
       </div>
       <div class="map-wrap reveal">
         <div id="map"></div>
+      </div>
+    </section>
+
+    <section class="section" id="moderacion" hidden>
+      <div class="section-head reveal">
+        <p class="eyebrow" data-i18n="admin.tag">Panel administrativo</p>
+        <h2 data-i18n="admin.title">Moderar publicaciones pendientes</h2>
+        <p data-i18n="admin.description">Aprueba, rechaza o elimina contenido enviado por la comunidad.</p>
+      </div>
+
+      <div class="forms-grid">
+        <article class="panel reveal">
+          <h3 data-i18n="admin.pendingPlaces">Lugares pendientes</h3>
+          <div id="pendingPlacesList" class="moderation-list" aria-live="polite"></div>
+        </article>
+
+        <article class="panel reveal">
+          <h3 data-i18n="admin.pendingServices">Servicios pendientes</h3>
+          <div id="pendingServicesList" class="moderation-list" aria-live="polite"></div>
+        </article>
       </div>
     </section>
   </main>

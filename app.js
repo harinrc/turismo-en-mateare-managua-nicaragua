@@ -20,6 +20,7 @@ const state = {
   markers: [],
   selectedPlaceId: null,
   user: null,
+  isAdmin: false,
   useFirebase: firebaseClient.enabled
 };
 
@@ -46,7 +47,11 @@ const refs = {
   signInBtn: document.getElementById("signInBtn"),
   signOutBtn: document.getElementById("signOutBtn"),
   authNotice: document.getElementById("authNotice"),
-  toastRegion: document.getElementById("toastRegion")
+  toastRegion: document.getElementById("toastRegion"),
+  navModeration: document.getElementById("navModeration"),
+  moderationSection: document.getElementById("moderacion"),
+  pendingPlacesList: document.getElementById("pendingPlacesList"),
+  pendingServicesList: document.getElementById("pendingServicesList")
 };
 
 let toastTimer = null;
@@ -98,8 +103,44 @@ function normalizePlace(place) {
     lat: Number(place.lat),
     lng: Number(place.lng),
     imageUrl: place.imageUrl || DEFAULT_PLACE_IMAGE,
-    tags: Array.isArray(place.tags) ? place.tags : ["Comunitario"]
+    tags: Array.isArray(place.tags) ? place.tags : ["Comunitario"],
+    status: place.status || "approved",
+    createdByName: place.createdByName || "Comunidad",
+    createdByUid: place.createdByUid || null
   };
+}
+
+function normalizeService(service) {
+  return {
+    id: service.id,
+    name: service.name,
+    type: service.type,
+    contact: service.contact,
+    schedule: service.schedule,
+    status: service.status || "approved",
+    createdByName: service.createdByName || "Comunidad",
+    createdByUid: service.createdByUid || null
+  };
+}
+
+function getVisiblePlaces() {
+  return state.useFirebase
+    ? state.places.filter((place) => (place.status || "approved") === "approved")
+    : state.places;
+}
+
+function getVisibleServices() {
+  return state.useFirebase
+    ? state.services.filter((service) => (service.status || "approved") === "approved")
+    : state.services;
+}
+
+function getPendingPlaces() {
+  return state.places.filter((place) => place.status === "pending");
+}
+
+function getPendingServices() {
+  return state.services.filter((service) => service.status === "pending");
 }
 
 function setPlacePreview(src) {
@@ -161,10 +202,11 @@ function formatCategory(category) {
 }
 
 function renderGuides() {
+  const visiblePlaces = getVisiblePlaces();
   const text = refs.searchGuide.value.trim().toLowerCase();
   const filter = refs.filterCategory.value;
 
-  const filtered = state.places.filter((place) => {
+  const filtered = visiblePlaces.filter((place) => {
     const byCategory = filter === "all" || place.category === filter;
     const byText =
       !text ||
@@ -200,16 +242,19 @@ function renderGuides() {
 }
 
 function renderCommunityFeed() {
+  const visiblePlaces = getVisiblePlaces();
+  const visibleServices = getVisibleServices();
+
   refs.communityFeed.innerHTML = "";
 
-  const placeItems = state.places.slice(0, 4).map((place) => ({
+  const placeItems = visiblePlaces.slice(0, 4).map((place) => ({
     type: t("feed.place"),
     title: place.name,
     meta: formatCategory(place.category),
     imageUrl: place.imageUrl || DEFAULT_PLACE_IMAGE
   }));
 
-  const serviceItems = state.services.slice(0, 4).map((service) => ({
+  const serviceItems = visibleServices.slice(0, 4).map((service) => ({
     type: t("feed.service"),
     title: service.name,
     meta: `${service.type} · ${service.schedule}`
@@ -228,7 +273,7 @@ function renderCommunityFeed() {
       refs.communityFeed.appendChild(card);
     });
 
-  refs.quickPosts.textContent = String(state.places.length + state.services.length);
+  refs.quickPosts.textContent = String(visiblePlaces.length + visibleServices.length);
 }
 
 function renderAlerts() {
@@ -268,7 +313,7 @@ function redrawMarkers() {
   state.markers.forEach((marker) => marker.remove());
   state.markers = [];
 
-  state.places.forEach((place) => {
+  getVisiblePlaces().forEach((place) => {
     const marker = L.marker([place.lat, place.lng]).addTo(state.map);
     marker.bindPopup(`
       <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}">
@@ -282,14 +327,14 @@ function redrawMarkers() {
 }
 
 function goToPlace(placeId) {
-  const place = state.places.find((p) => p.id === placeId);
+  const place = getVisiblePlaces().find((p) => p.id === placeId);
   if (!place || !state.map) return;
   state.selectedPlaceId = placeId;
   state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
 }
 
 function openRoute(placeId) {
-  const place = state.places.find((p) => p.id === placeId);
+  const place = getVisiblePlaces().find((p) => p.id === placeId);
   if (!place) return;
 
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
@@ -309,7 +354,8 @@ async function fetchWeather(lat, lng) {
 
 async function renderWeather() {
   const placeId = refs.weatherPlace.value;
-  const place = state.places.find((p) => p.id === placeId) ?? state.places[0];
+  const visiblePlaces = getVisiblePlaces();
+  const place = visiblePlaces.find((p) => p.id === placeId) ?? visiblePlaces[0];
 
   if (!place) {
     refs.weatherOutput.textContent = "Sin datos";
@@ -340,14 +386,14 @@ function syncWeatherSelector() {
   const current = refs.weatherPlace.value;
   refs.weatherPlace.innerHTML = "";
 
-  state.places.forEach((place) => {
+  getVisiblePlaces().forEach((place) => {
     const option = document.createElement("option");
     option.value = place.id;
     option.textContent = place.name;
     refs.weatherPlace.appendChild(option);
   });
 
-  if (current && state.places.some((place) => place.id === current)) {
+  if (current && getVisiblePlaces().some((place) => place.id === current)) {
     refs.weatherPlace.value = current;
   }
 }
@@ -358,6 +404,57 @@ function refreshUiData() {
   redrawMarkers();
   renderCommunityFeed();
   renderWeather();
+  renderModerationPanel();
+}
+
+function renderModerationPanel() {
+  if (!refs.pendingPlacesList || !refs.pendingServicesList) return;
+
+  const pendingPlaces = getPendingPlaces();
+  const pendingServices = getPendingServices();
+
+  refs.pendingPlacesList.innerHTML = "";
+  refs.pendingServicesList.innerHTML = "";
+
+  if (!pendingPlaces.length) {
+    refs.pendingPlacesList.innerHTML = `<p class="moderation-empty">${t("admin.emptyPlaces")}</p>`;
+  }
+
+  if (!pendingServices.length) {
+    refs.pendingServicesList.innerHTML = `<p class="moderation-empty">${t("admin.emptyServices")}</p>`;
+  }
+
+  pendingPlaces.forEach((place) => {
+    const item = document.createElement("article");
+    item.className = "moderation-item";
+    item.innerHTML = `
+      <h4>${place.name}</h4>
+      <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
+      <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
+      <div class="moderation-actions">
+        <button class="btn btn-primary" data-entity="place" data-id="${place.id}" data-action="approve">${t("admin.approve")}</button>
+        <button class="btn btn-warning" data-entity="place" data-id="${place.id}" data-action="reject">${t("admin.reject")}</button>
+        <button class="btn btn-danger" data-entity="place" data-id="${place.id}" data-action="delete">${t("admin.delete")}</button>
+      </div>
+    `;
+    refs.pendingPlacesList.appendChild(item);
+  });
+
+  pendingServices.forEach((service) => {
+    const item = document.createElement("article");
+    item.className = "moderation-item";
+    item.innerHTML = `
+      <h4>${service.name}</h4>
+      <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
+      <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
+      <div class="moderation-actions">
+        <button class="btn btn-primary" data-entity="service" data-id="${service.id}" data-action="approve">${t("admin.approve")}</button>
+        <button class="btn btn-warning" data-entity="service" data-id="${service.id}" data-action="reject">${t("admin.reject")}</button>
+        <button class="btn btn-danger" data-entity="service" data-id="${service.id}" data-action="delete">${t("admin.delete")}</button>
+      </div>
+    `;
+    refs.pendingServicesList.appendChild(item);
+  });
 }
 
 function setFormsEnabled(enabled) {
@@ -400,6 +497,35 @@ function updateAuthUI() {
   refs.authNotice.textContent = t("auth.required");
   refs.authNotice.classList.remove("ok");
   setFormsEnabled(false);
+}
+
+function updateAdminUI() {
+  const canModerate = state.useFirebase && state.isAdmin;
+
+  if (refs.navModeration) {
+    refs.navModeration.hidden = !canModerate;
+  }
+
+  if (refs.moderationSection) {
+    refs.moderationSection.hidden = !canModerate;
+  }
+}
+
+async function syncAdminClaim(user) {
+  if (!user || !state.useFirebase) {
+    state.isAdmin = false;
+    updateAdminUI();
+    return;
+  }
+
+  try {
+    const token = await user.getIdTokenResult(true);
+    state.isAdmin = Boolean(token.claims.admin);
+  } catch {
+    state.isAdmin = false;
+  }
+
+  updateAdminUI();
 }
 
 function getSignInErrorMessage(error) {
@@ -468,8 +594,10 @@ async function publishPlace(data) {
     lat: Number(data.get("lat")),
     lng: Number(data.get("lng")),
     imageUrl,
+    status: state.useFirebase ? (state.isAdmin ? "approved" : "pending") : "approved",
     tags: ["Comunitario"],
-    createdByName: state.user?.displayName ?? "local"
+    createdByName: state.user?.displayName ?? "local",
+    createdByUid: state.user?.uid ?? "local"
   };
 
   try {
@@ -488,7 +616,8 @@ async function publishPlace(data) {
 
   refs.placeForm.reset();
   setPlacePreview("");
-  notify(t("msg.placeSaved"), "success");
+  const placeMessage = payload.status === "pending" ? t("msg.placePending") : t("msg.placeSaved");
+  notify(placeMessage, "success");
 }
 
 async function publishService(data) {
@@ -502,7 +631,9 @@ async function publishService(data) {
     type: String(data.get("type")),
     contact: String(data.get("contact")),
     schedule: String(data.get("schedule")),
-    createdByName: state.user?.displayName ?? "local"
+    status: state.useFirebase ? (state.isAdmin ? "approved" : "pending") : "approved",
+    createdByName: state.user?.displayName ?? "local",
+    createdByUid: state.user?.uid ?? "local"
   };
 
   try {
@@ -520,7 +651,42 @@ async function publishService(data) {
   }
 
   refs.serviceForm.reset();
-  notify(t("msg.serviceSaved"), "success");
+  const serviceMessage = payload.status === "pending" ? t("msg.servicePending") : t("msg.serviceSaved");
+  notify(serviceMessage, "success");
+}
+
+async function applyModeration(entity, itemId, action) {
+  if (!state.useFirebase || !state.isAdmin || !state.user) {
+    notify(t("msg.adminOnly"), "error");
+    return;
+  }
+
+  try {
+    if (entity === "place") {
+      if (action === "delete") {
+        await firebaseClient.deletePlace(itemId);
+      } else if (action === "approve") {
+        await firebaseClient.updatePlaceStatus(itemId, "approved", state.user.uid);
+      } else if (action === "reject") {
+        await firebaseClient.updatePlaceStatus(itemId, "rejected", state.user.uid);
+      }
+    }
+
+    if (entity === "service") {
+      if (action === "delete") {
+        await firebaseClient.deleteService(itemId);
+      } else if (action === "approve") {
+        await firebaseClient.updateServiceStatus(itemId, "approved", state.user.uid);
+      } else if (action === "reject") {
+        await firebaseClient.updateServiceStatus(itemId, "rejected", state.user.uid);
+      }
+    }
+
+    notify(t("msg.moderationUpdated"), "success");
+  } catch (error) {
+    console.error("Moderation error:", error);
+    notify(t("msg.moderationError"), "error");
+  }
 }
 
 function handleForms() {
@@ -541,11 +707,11 @@ function setupFirebaseRealtime() {
   firebaseClient.subscribePlaces(
     (places) => {
       const normalized = places.map(normalizePlace);
-      state.places = normalized.length ? normalized : [...initialPlaces];
+      state.places = normalized.length ? normalized : [...initialPlaces].map(normalizePlace);
       refreshUiData();
     },
     () => {
-      state.places = [...initialPlaces];
+      state.places = [...initialPlaces].map(normalizePlace);
       refreshUiData();
       refs.authNotice.textContent = t("msg.firebaseLoadError");
       refs.authNotice.classList.remove("ok");
@@ -554,20 +720,23 @@ function setupFirebaseRealtime() {
 
   firebaseClient.subscribeServices(
     (services) => {
-      state.services = services.length ? services : [...initialServices];
+      const normalized = services.map(normalizeService);
+      state.services = normalized.length ? normalized : [...initialServices].map(normalizeService);
       refreshUiData();
     },
     () => {
-      state.services = [...initialServices];
+      state.services = [...initialServices].map(normalizeService);
       refreshUiData();
       refs.authNotice.textContent = t("msg.firebaseLoadError");
       refs.authNotice.classList.remove("ok");
     }
   );
 
-  firebaseClient.onAuth((user) => {
+  firebaseClient.onAuth(async (user) => {
     state.user = user;
+    await syncAdminClaim(user);
     updateAuthUI();
+    refreshUiData();
   });
 }
 
@@ -614,6 +783,7 @@ function setupInteractions() {
     renderCommunityFeed();
     renderAlerts();
     renderWeather();
+    renderModerationPanel();
   });
 
   if (refs.placeForm.elements.imageUrl) {
@@ -652,6 +822,23 @@ function setupInteractions() {
   refs.signOutBtn?.addEventListener("click", async () => {
     await firebaseClient.signOutUser();
   });
+
+  [refs.pendingPlacesList, refs.pendingServicesList].forEach((list) => {
+    list?.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const button = target.closest("button[data-action][data-entity][data-id]");
+      if (!(button instanceof HTMLButtonElement)) return;
+
+      const action = button.dataset.action;
+      const entity = button.dataset.entity;
+      const itemId = button.dataset.id;
+
+      if (!action || !entity || !itemId) return;
+      await applyModeration(entity, itemId, action);
+    });
+  });
 }
 
 function setupRevealOnScroll() {
@@ -684,11 +871,13 @@ function boot() {
   if (state.useFirebase) {
     setupFirebaseRealtime();
     setFormsEnabled(false);
+    updateAdminUI();
   } else {
-    state.places = loadFromStorage(STORAGE_KEYS.places, state.places);
-    state.services = loadFromStorage(STORAGE_KEYS.services, state.services);
+    state.places = loadFromStorage(STORAGE_KEYS.places, state.places).map(normalizePlace);
+    state.services = loadFromStorage(STORAGE_KEYS.services, state.services).map(normalizeService);
     refreshUiData();
     updateAuthUI();
+    updateAdminUI();
   }
 }
 
