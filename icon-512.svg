@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Mateare Vivo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f2a3d"/>
+      <stop offset="55%" stop-color="#174a66"/>
+      <stop offset="100%" stop-color="#1e8a5f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <circle cx="384" cy="136" r="48" fill="#fff4dc"/>
+  <path d="M64 332c58-5 93-57 139-57 45 0 69 37 106 37 38 0 60-27 139-27v139H64z" fill="#f0a127"/>
+  <path d="M122 347l78-127 81 127z" fill="#dff7ec" opacity="0.95"/>
+  <text x="256" y="450" text-anchor="middle" font-family="Outfit, Arial, sans-serif" font-size="74" font-weight="700" fill="#ffffff">Mateare Vivo</text>
+</svg>
