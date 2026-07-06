@@ -486,6 +486,18 @@ form textarea {
   gap: 0.7rem;
 }
 
+.location-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.location-hint {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
 .community-feed {
   margin-top: 1rem;
 }
@@ -699,6 +711,10 @@ form textarea {
 
   .row-2 {
     grid-template-columns: 1fr;
+  }
+
+  .location-picker-row .btn {
+    width: 100%;
   }
 
   .hero {

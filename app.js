@@ -19,6 +19,7 @@ const state = {
   map: null,
   markers: [],
   selectedPlaceId: null,
+  isPickingLocation: false,
   user: null,
   isAdmin: false,
   useFirebase: firebaseClient.enabled
@@ -51,10 +52,17 @@ const refs = {
   navModeration: document.getElementById("navModeration"),
   moderationSection: document.getElementById("moderacion"),
   pendingPlacesList: document.getElementById("pendingPlacesList"),
-  pendingServicesList: document.getElementById("pendingServicesList")
+  pendingServicesList: document.getElementById("pendingServicesList"),
+  placeLat: document.getElementById("placeLat"),
+  placeLng: document.getElementById("placeLng"),
+  pickLocationBtn: document.getElementById("pickLocationBtn"),
+  clearLocationBtn: document.getElementById("clearLocationBtn")
 };
 
 let toastTimer = null;
+let pickerMarker = null;
+let placesUnsubscribe = null;
+let servicesUnsubscribe = null;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -304,8 +312,57 @@ function initMap() {
     attribution: "&copy; OpenStreetMap"
   }).addTo(state.map);
 
+  state.map.on("click", (event) => {
+    if (!state.isPickingLocation) return;
+    const { lat, lng } = event.latlng;
+    setPlaceCoordinates(lat, lng, { showToast: true });
+    state.isPickingLocation = false;
+  });
+
   redrawMarkers();
 }
+
+function setPlaceCoordinates(lat, lng, options = {}) {
+  const showToast = options.showToast ?? false;
+  const flyTo = options.flyTo ?? false;
+
+  const safeLat = Number(lat);
+  const safeLng = Number(lng);
+  if (!Number.isFinite(safeLat) || !Number.isFinite(safeLng)) return;
+
+  if (refs.placeLat) refs.placeLat.value = safeLat.toFixed(6);
+  if (refs.placeLng) refs.placeLng.value = safeLng.toFixed(6);
+
+  if (state.map) {
+    if (pickerMarker) {
+      pickerMarker.setLatLng([safeLat, safeLng]);
+    } else {
+      pickerMarker = L.marker([safeLat, safeLng], { opacity: 0.9 }).addTo(state.map);
+      pickerMarker.bindPopup(t("publish.pickOnMap"));
+    }
+
+    if (flyTo) {
+      state.map.flyTo([safeLat, safeLng], Math.max(state.map.getZoom(), 14), { duration: 0.7 });
+    }
+  }
+
+  if (showToast) {
+    notify(t("msg.mapLocationSet"), "success");
+  }
+}
+
+function clearPlaceCoordinates(showToast = true) {
+  if (refs.placeLat) refs.placeLat.value = "";
+  if (refs.placeLng) refs.placeLng.value = "";
+  if (pickerMarker) {
+    pickerMarker.remove();
+    pickerMarker = null;
+  }
+  state.isPickingLocation = false;
+
+  if (showToast) {
+    notify(t("msg.mapLocationCleared"), "info");
+  }
 
 function redrawMarkers() {
   if (!state.map) return;
@@ -594,11 +651,16 @@ async function publishPlace(data) {
     lat: Number(data.get("lat")),
     lng: Number(data.get("lng")),
     imageUrl,
-    status: state.useFirebase ? (state.isAdmin ? "approved" : "pending") : "approved",
+    status: state.useFirebase ? "pending" : "approved",
     tags: ["Comunitario"],
     createdByName: state.user?.displayName ?? "local",
     createdByUid: state.user?.uid ?? "local"
   };
+
+  if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) {
+    notify(t("msg.locationRequired"), "error");
+    return;
+  }
 
   try {
     if (state.useFirebase) {
@@ -610,12 +672,14 @@ async function publishPlace(data) {
     }
   } catch (error) {
     console.error("Publish place error:", error);
-    notify(t("msg.placeSaveError"), "error");
+    const isDenied = String(error?.code || "").includes("permission-denied");
+    notify(isDenied ? t("msg.permissionDenied") : t("msg.placeSaveError"), "error");
     return;
   }
 
   refs.placeForm.reset();
   setPlacePreview("");
+  clearPlaceCoordinates(false);
   const placeMessage = payload.status === "pending" ? t("msg.placePending") : t("msg.placeSaved");
   notify(placeMessage, "success");
 }
@@ -631,7 +695,7 @@ async function publishService(data) {
     type: String(data.get("type")),
     contact: String(data.get("contact")),
     schedule: String(data.get("schedule")),
-    status: state.useFirebase ? (state.isAdmin ? "approved" : "pending") : "approved",
+    status: state.useFirebase ? "pending" : "approved",
     createdByName: state.user?.displayName ?? "local",
     createdByUid: state.user?.uid ?? "local"
   };
@@ -646,7 +710,8 @@ async function publishService(data) {
     }
   } catch (error) {
     console.error("Publish service error:", error);
-    notify(t("msg.serviceSaveError"), "error");
+    const isDenied = String(error?.code || "").includes("permission-denied");
+    notify(isDenied ? t("msg.permissionDenied") : t("msg.serviceSaveError"), "error");
     return;
   }
 
@@ -704,37 +769,52 @@ function handleForms() {
 }
 
 function setupFirebaseRealtime() {
-  firebaseClient.subscribePlaces(
-    (places) => {
-      const normalized = places.map(normalizePlace);
-      state.places = normalized.length ? normalized : [...initialPlaces].map(normalizePlace);
-      refreshUiData();
-    },
-    () => {
-      state.places = [...initialPlaces].map(normalizePlace);
-      refreshUiData();
-      refs.authNotice.textContent = t("msg.firebaseLoadError");
-      refs.authNotice.classList.remove("ok");
-    }
-  );
+  function stopRealtimeSubscriptions() {
+    placesUnsubscribe?.();
+    servicesUnsubscribe?.();
+    placesUnsubscribe = null;
+    servicesUnsubscribe = null;
+  }
 
-  firebaseClient.subscribeServices(
-    (services) => {
-      const normalized = services.map(normalizeService);
-      state.services = normalized.length ? normalized : [...initialServices].map(normalizeService);
-      refreshUiData();
-    },
-    () => {
-      state.services = [...initialServices].map(normalizeService);
-      refreshUiData();
-      refs.authNotice.textContent = t("msg.firebaseLoadError");
-      refs.authNotice.classList.remove("ok");
-    }
-  );
+  function startRealtimeSubscriptions() {
+    stopRealtimeSubscriptions();
+    const includeUnapproved = state.isAdmin;
+
+    placesUnsubscribe = firebaseClient.subscribePlaces(
+      { includeUnapproved },
+      (places) => {
+        const normalized = places.map(normalizePlace);
+        state.places = normalized.length ? normalized : [...initialPlaces].map(normalizePlace);
+        refreshUiData();
+      },
+      () => {
+        state.places = [...initialPlaces].map(normalizePlace);
+        refreshUiData();
+        refs.authNotice.textContent = t("msg.firebaseLoadError");
+        refs.authNotice.classList.remove("ok");
+      }
+    );
+
+    servicesUnsubscribe = firebaseClient.subscribeServices(
+      { includeUnapproved },
+      (services) => {
+        const normalized = services.map(normalizeService);
+        state.services = normalized.length ? normalized : [...initialServices].map(normalizeService);
+        refreshUiData();
+      },
+      () => {
+        state.services = [...initialServices].map(normalizeService);
+        refreshUiData();
+        refs.authNotice.textContent = t("msg.firebaseLoadError");
+        refs.authNotice.classList.remove("ok");
+      }
+    );
+  }
 
   firebaseClient.onAuth(async (user) => {
     state.user = user;
     await syncAdminClaim(user);
+    startRealtimeSubscriptions();
     updateAuthUI();
     refreshUiData();
   });
@@ -784,6 +864,23 @@ function setupInteractions() {
     renderAlerts();
     renderWeather();
     renderModerationPanel();
+  });
+
+  refs.pickLocationBtn?.addEventListener("click", () => {
+    state.isPickingLocation = true;
+    notify(t("msg.mapPickStart"), "info");
+    document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  refs.clearLocationBtn?.addEventListener("click", () => {
+    clearPlaceCoordinates(true);
+  });
+
+  refs.placeForm.addEventListener("reset", () => {
+    setTimeout(() => {
+      clearPlaceCoordinates(false);
+      setPlacePreview("");
+    }, 0);
   });
 
   if (refs.placeForm.elements.imageUrl) {

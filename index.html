@@ -182,14 +182,19 @@
             <input id="placeImageFile" name="imageFile" type="file" accept="image/*">
           </label>
           <img id="placeImagePreview" class="place-image-preview" src="" alt="Vista previa" hidden>
+          <div class="location-picker-row">
+            <button class="btn" id="pickLocationBtn" type="button" data-i18n="publish.pickOnMap">Seleccionar en mapa</button>
+            <button class="btn" id="clearLocationBtn" type="button" data-i18n="publish.clearLocation">Limpiar ubicación</button>
+          </div>
+          <p class="location-hint" data-i18n="publish.locationHint">Haz clic en "Seleccionar en mapa" y luego toca el punto exacto en el mapa.</p>
           <div class="row-2">
             <label>
               <span>Lat</span>
-              <input required name="lat" type="number" step="any">
+              <input required id="placeLat" name="lat" type="number" step="any" readonly>
             </label>
             <label>
               <span>Lng</span>
-              <input required name="lng" type="number" step="any">
+              <input required id="placeLng" name="lng" type="number" step="any" readonly>
             </label>
           </div>
           <button class="btn btn-primary" type="submit" data-i18n="publish.publishPlace">Publicar lugar</button>

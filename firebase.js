@@ -14,6 +14,7 @@ import {
   updateDoc,
   deleteDoc,
   query,
+  where,
   orderBy,
   onSnapshot,
   serverTimestamp
@@ -52,8 +53,18 @@ export function createFirebaseClient() {
   const storage = getStorage(app);
   const provider = new GoogleAuthProvider();
 
-  const placesQuery = query(collection(db, "places"), orderBy("createdAt", "desc"));
-  const servicesQuery = query(collection(db, "services"), orderBy("createdAt", "desc"));
+  const placesAllQuery = query(collection(db, "places"), orderBy("createdAt", "desc"));
+  const servicesAllQuery = query(collection(db, "services"), orderBy("createdAt", "desc"));
+  const placesApprovedQuery = query(
+    collection(db, "places"),
+    where("status", "==", "approved"),
+    orderBy("createdAt", "desc")
+  );
+  const servicesApprovedQuery = query(
+    collection(db, "services"),
+    where("status", "==", "approved"),
+    orderBy("createdAt", "desc")
+  );
 
   return {
     enabled: true,
@@ -71,7 +82,10 @@ export function createFirebaseClient() {
       return signOut(auth);
     },
 
-    subscribePlaces(callback, onError) {
+    subscribePlaces(options, callback, onError) {
+      const includeUnapproved = Boolean(options?.includeUnapproved);
+      const placesQuery = includeUnapproved ? placesAllQuery : placesApprovedQuery;
+
       return onSnapshot(
         placesQuery,
         (snapshot) => {
@@ -85,7 +99,10 @@ export function createFirebaseClient() {
       );
     },
 
-    subscribeServices(callback, onError) {
+    subscribeServices(options, callback, onError) {
+      const includeUnapproved = Boolean(options?.includeUnapproved);
+      const servicesQuery = includeUnapproved ? servicesAllQuery : servicesApprovedQuery;
+
       return onSnapshot(
         servicesQuery,
         (snapshot) => {

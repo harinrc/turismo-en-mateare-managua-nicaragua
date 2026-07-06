@@ -133,6 +133,9 @@ export const i18n = {
     "publish.placeImageUrl": "URL de imagen (opcional)",
     "publish.placeImageUrlPlaceholder": "https://...",
     "publish.placeImageFile": "Subir imagen (opcional)",
+    "publish.pickOnMap": "Seleccionar en mapa",
+    "publish.clearLocation": "Limpiar ubicacion",
+    "publish.locationHint": "Haz clic en \"Seleccionar en mapa\" y luego toca el punto exacto en el mapa.",
     "publish.publishPlace": "Publicar lugar",
     "publish.serviceTitle": "Registrar servicio turistico",
     "publish.serviceName": "Nombre del servicio",
@@ -175,6 +178,7 @@ export const i18n = {
     "msg.serviceSaved": "Servicio publicado correctamente.",
     "msg.servicePending": "Tu servicio fue enviado para revision del administrador.",
     "msg.serviceSaveError": "No se pudo publicar el servicio. Intenta de nuevo.",
+    "msg.permissionDenied": "No tienes permisos para esta accion. Revisa reglas y autenticacion.",
     "msg.invalidImage": "La URL de imagen no es valida.",
     "msg.realtimeSync": "Actualizacion en tiempo real recibida.",
     "msg.signInRequired": "Debes iniciar sesion con Google para publicar.",
@@ -187,7 +191,11 @@ export const i18n = {
     "msg.signInNetworkError": "Error de red al iniciar sesion. Verifica conexion e intenta otra vez.",
     "msg.adminOnly": "Esta accion es solo para administradores.",
     "msg.moderationUpdated": "Moderacion aplicada correctamente.",
-    "msg.moderationError": "No se pudo aplicar la moderacion."
+    "msg.moderationError": "No se pudo aplicar la moderacion.",
+    "msg.mapPickStart": "Selecciona el punto en el mapa para guardar la ubicacion.",
+    "msg.mapLocationSet": "Ubicacion cargada desde el mapa.",
+    "msg.mapLocationCleared": "Ubicacion limpiada.",
+    "msg.locationRequired": "Debes seleccionar una ubicacion en el mapa antes de publicar."
   },
   en: {
     "nav.home": "Home",
@@ -246,6 +254,9 @@ export const i18n = {
     "publish.placeImageUrl": "Image URL (optional)",
     "publish.placeImageUrlPlaceholder": "https://...",
     "publish.placeImageFile": "Upload image (optional)",
+    "publish.pickOnMap": "Pick on map",
+    "publish.clearLocation": "Clear location",
+    "publish.locationHint": "Click \"Pick on map\" and then tap the exact point on the map.",
     "publish.publishPlace": "Publish place",
     "publish.serviceTitle": "Register tourism service",
     "publish.serviceName": "Service name",
@@ -288,6 +299,7 @@ export const i18n = {
     "msg.serviceSaved": "Service published successfully.",
     "msg.servicePending": "Your service was submitted for admin review.",
     "msg.serviceSaveError": "The service could not be published. Please try again.",
+    "msg.permissionDenied": "You do not have permission for this action. Check rules and authentication.",
     "msg.invalidImage": "The image URL is not valid.",
     "msg.realtimeSync": "Real-time update received.",
     "msg.signInRequired": "You must sign in with Google to publish.",
@@ -300,6 +312,10 @@ export const i18n = {
     "msg.signInNetworkError": "Network error while signing in. Check your connection and try again.",
     "msg.adminOnly": "This action is for administrators only.",
     "msg.moderationUpdated": "Moderation updated successfully.",
-    "msg.moderationError": "Moderation update failed."
+    "msg.moderationError": "Moderation update failed.",
+    "msg.mapPickStart": "Select the point on the map to save the location.",
+    "msg.mapLocationSet": "Location set from map.",
+    "msg.mapLocationCleared": "Location cleared.",
+    "msg.locationRequired": "You must select a location on the map before publishing."
   }
 };
