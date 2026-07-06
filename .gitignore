@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+coverage/
+dist/
+
+# Environment and local secrets
+.env
+.env.*
+*.local
+
+# Firebase Admin service account keys (never commit)
+*firebase-adminsdk*.json
+*serviceAccount*.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/

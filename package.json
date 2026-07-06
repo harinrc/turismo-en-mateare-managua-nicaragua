@@ -1,0 +1,24 @@
+{
+  "name": "turismo-en-mateare-managua-nicaragua",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harinrc/turismo-en-mateare-managua-nicaragua.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/harinrc/turismo-en-mateare-managua-nicaragua/issues"
+  },
+  "homepage": "https://github.com/harinrc/turismo-en-mateare-managua-nicaragua#readme",
+  "dependencies": {
+    "firebase-admin": "^14.1.0"
+  }
+}

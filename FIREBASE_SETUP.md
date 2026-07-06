@@ -92,3 +92,36 @@ service firebase.storage {
 - Si falla la carga de imagen: revisa Storage rules y que storageBucket sea correcto.
 - Si no aparecen datos en vivo: revisa Firestore rules y que exista la coleccion.
 - Si la app queda en modo local: revisa que todos los campos de [firebase-config.js](firebase-config.js) esten completos.
+
+## 9) Asignar rol administrador (Custom Claims)
+Usa este paso para dar acceso total solo a tu cuenta admin.
+
+1. Crea una Service Account Key en Firebase Console:
+  - Project settings > Service accounts > Generate new private key.
+  - Guarda el JSON en tu PC (no lo subas al repositorio).
+
+2. Instala dependencia una sola vez en este proyecto:
+```powershell
+npm init -y
+npm install firebase-admin
+```
+
+Si PowerShell bloquea npm.ps1 por politica de ejecucion, usa:
+```powershell
+npm.cmd init -y
+npm.cmd install firebase-admin
+```
+
+3. Ejecuta el script para asignar claim admin a tu correo:
+```powershell
+node scripts/set-admin-claim.mjs "C:\ruta\a\serviceAccountKey.json" "djhjrc96@gmail.com"
+```
+
+4. Cierra sesion y vuelve a iniciar sesion en la web para refrescar token.
+
+5. Verifica en backend/reglas usando:
+  - request.auth.token.admin == true
+
+Nota de seguridad:
+- No guardes el archivo serviceAccountKey.json en GitHub.
+- Si la llave se filtra, revocala y genera una nueva.
