@@ -54,6 +54,27 @@ const refs = {
   moderationSection: document.getElementById("moderacion"),
   pendingPlacesList: document.getElementById("pendingPlacesList"),
   pendingServicesList: document.getElementById("pendingServicesList"),
+  allPlacesList: document.getElementById("allPlacesList"),
+  allServicesList: document.getElementById("allServicesList"),
+  adminEditorForm: document.getElementById("adminEditorForm"),
+  editorEntity: document.getElementById("editorEntity"),
+  editorItemId: document.getElementById("editorItemId"),
+  editorName: document.getElementById("editorName"),
+  editorCategoryLabel: document.getElementById("editorCategoryLabel"),
+  editorCategory: document.getElementById("editorCategory"),
+  editorTypeLabel: document.getElementById("editorTypeLabel"),
+  editorType: document.getElementById("editorType"),
+  editorDescriptionLabel: document.getElementById("editorDescriptionLabel"),
+  editorDescription: document.getElementById("editorDescription"),
+  editorCoordsRow: document.getElementById("editorCoordsRow"),
+  editorLat: document.getElementById("editorLat"),
+  editorLng: document.getElementById("editorLng"),
+  editorServiceRow: document.getElementById("editorServiceRow"),
+  editorContact: document.getElementById("editorContact"),
+  editorSchedule: document.getElementById("editorSchedule"),
+  editorImageUrls: document.getElementById("editorImageUrls"),
+  editorStatus: document.getElementById("editorStatus"),
+  cancelEditorBtn: document.getElementById("cancelEditorBtn"),
   placeLat: document.getElementById("placeLat"),
   placeLng: document.getElementById("placeLng"),
   pickLocationBtn: document.getElementById("pickLocationBtn"),
@@ -64,6 +85,7 @@ let toastTimer = null;
 let pickerMarker = null;
 let placesUnsubscribe = null;
 let servicesUnsubscribe = null;
+let alertsRefreshTimer = null;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -601,14 +623,64 @@ function refreshUiData() {
   renderModerationPanel();
 }
 
+function getStatusLabel(status) {
+  if (status === "approved") return t("admin.statusApproved");
+  if (status === "rejected") return t("admin.statusRejected");
+  return t("admin.statusPending");
+}
+
+function openAdminEditor(entity, itemId) {
+  if (!refs.adminEditorForm || !state.isAdmin) return;
+
+  const source = entity === "place"
+    ? state.places.find((item) => item.id === itemId)
+    : state.services.find((item) => item.id === itemId);
+  if (!source) return;
+
+  refs.editorEntity.value = entity;
+  refs.editorItemId.value = source.id;
+  refs.editorName.value = source.name || "";
+  refs.editorStatus.value = source.status || "pending";
+  refs.editorImageUrls.value = (source.imageUrls || []).join("\n");
+
+  const isPlace = entity === "place";
+  refs.editorCategoryLabel.hidden = !isPlace;
+  refs.editorCoordsRow.hidden = !isPlace;
+  refs.editorDescriptionLabel.hidden = !isPlace;
+  refs.editorTypeLabel.hidden = isPlace;
+  refs.editorServiceRow.hidden = isPlace;
+
+  if (isPlace) {
+    refs.editorCategory.value = source.category || "naturaleza";
+    refs.editorDescription.value = source.description || "";
+    refs.editorLat.value = Number.isFinite(source.lat) ? source.lat : "";
+    refs.editorLng.value = Number.isFinite(source.lng) ? source.lng : "";
+  } else {
+    refs.editorType.value = source.type || "actividad";
+    refs.editorContact.value = source.contact || "";
+    refs.editorSchedule.value = source.schedule || "";
+  }
+
+  refs.adminEditorForm.hidden = false;
+  refs.adminEditorForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function closeAdminEditor() {
+  if (!refs.adminEditorForm) return;
+  refs.adminEditorForm.hidden = true;
+  refs.adminEditorForm.reset();
+}
+
 function renderModerationPanel() {
-  if (!refs.pendingPlacesList || !refs.pendingServicesList) return;
+  if (!refs.pendingPlacesList || !refs.pendingServicesList || !refs.allPlacesList || !refs.allServicesList) return;
 
   const pendingPlaces = getPendingPlaces();
   const pendingServices = getPendingServices();
 
   refs.pendingPlacesList.innerHTML = "";
   refs.pendingServicesList.innerHTML = "";
+  refs.allPlacesList.innerHTML = "";
+  refs.allServicesList.innerHTML = "";
 
   if (!pendingPlaces.length) {
     refs.pendingPlacesList.innerHTML = `<p class="moderation-empty">${t("admin.emptyPlaces")}</p>`;
@@ -623,6 +695,7 @@ function renderModerationPanel() {
     item.className = "moderation-item";
     item.innerHTML = `
       <h4>${place.name}</h4>
+      <p><span class="status-pill pending">${getStatusLabel(place.status)}</span></p>
       <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
       <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
       <div class="moderation-actions">
@@ -639,6 +712,7 @@ function renderModerationPanel() {
     item.className = "moderation-item";
     item.innerHTML = `
       <h4>${service.name}</h4>
+      <p><span class="status-pill pending">${getStatusLabel(service.status)}</span></p>
       <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
       <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
       <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
@@ -649,6 +723,46 @@ function renderModerationPanel() {
       </div>
     `;
     refs.pendingServicesList.appendChild(item);
+  });
+
+  if (!state.places.length) {
+    refs.allPlacesList.innerHTML = `<p class="moderation-empty">${t("admin.emptyAllPlaces")}</p>`;
+  }
+
+  if (!state.services.length) {
+    refs.allServicesList.innerHTML = `<p class="moderation-empty">${t("admin.emptyAllServices")}</p>`;
+  }
+
+  state.places.forEach((place) => {
+    const item = document.createElement("article");
+    item.className = "moderation-item";
+    item.innerHTML = `
+      <h4>${place.name}</h4>
+      <p><span class="status-pill ${place.status || "pending"}">${getStatusLabel(place.status)}</span></p>
+      <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
+      <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
+      <div class="moderation-actions">
+        <button class="btn" data-entity="place" data-id="${place.id}" data-action="edit">${t("admin.edit")}</button>
+        <button class="btn btn-danger" data-entity="place" data-id="${place.id}" data-action="delete">${t("admin.delete")}</button>
+      </div>
+    `;
+    refs.allPlacesList.appendChild(item);
+  });
+
+  state.services.forEach((service) => {
+    const item = document.createElement("article");
+    item.className = "moderation-item";
+    item.innerHTML = `
+      <h4>${service.name}</h4>
+      <p><span class="status-pill ${service.status || "pending"}">${getStatusLabel(service.status)}</span></p>
+      <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
+      <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
+      <div class="moderation-actions">
+        <button class="btn" data-entity="service" data-id="${service.id}" data-action="edit">${t("admin.edit")}</button>
+        <button class="btn btn-danger" data-entity="service" data-id="${service.id}" data-action="delete">${t("admin.delete")}</button>
+      </div>
+    `;
+    refs.allServicesList.appendChild(item);
   });
 }
 
@@ -703,6 +817,10 @@ function updateAdminUI() {
 
   if (refs.moderationSection) {
     refs.moderationSection.hidden = !canModerate;
+  }
+
+  if (!canModerate) {
+    closeAdminEditor();
   }
 }
 
@@ -883,6 +1001,11 @@ async function applyModeration(entity, itemId, action) {
     return;
   }
 
+  if (action === "edit") {
+    openAdminEditor(entity, itemId);
+    return;
+  }
+
   try {
     if (entity === "place") {
       if (action === "delete") {
@@ -907,6 +1030,68 @@ async function applyModeration(entity, itemId, action) {
     notify(t("msg.moderationUpdated"), "success");
   } catch (error) {
     console.error("Moderation error:", error);
+    notify(t("msg.moderationError"), "error");
+  }
+}
+
+async function saveAdminChanges(event) {
+  event.preventDefault();
+
+  if (!state.useFirebase || !state.isAdmin || !state.user) {
+    notify(t("msg.adminOnly"), "error");
+    return;
+  }
+
+  const entity = refs.editorEntity.value;
+  const itemId = refs.editorItemId.value;
+  if (!entity || !itemId) return;
+
+  const status = refs.editorStatus.value;
+  const imageUrls = parseImageUrlsText(refs.editorImageUrls.value);
+
+  try {
+    if (entity === "place") {
+      const updates = {
+        name: refs.editorName.value.trim(),
+        category: refs.editorCategory.value,
+        description: refs.editorDescription.value.trim(),
+        lat: Number(refs.editorLat.value),
+        lng: Number(refs.editorLng.value),
+        imageUrls,
+        imageUrl: imageUrls[0] || DEFAULT_PLACE_IMAGE,
+        status,
+        moderatedByUid: state.user.uid,
+        moderatedAt: new Date().toISOString()
+      };
+
+      if (!Number.isFinite(updates.lat) || !Number.isFinite(updates.lng)) {
+        notify(t("msg.locationRequired"), "error");
+        return;
+      }
+
+      await firebaseClient.updatePlace(itemId, updates);
+    }
+
+    if (entity === "service") {
+      const updates = {
+        name: refs.editorName.value.trim(),
+        type: refs.editorType.value,
+        contact: refs.editorContact.value.trim(),
+        schedule: refs.editorSchedule.value.trim(),
+        imageUrls,
+        imageUrl: imageUrls[0] || "",
+        status,
+        moderatedByUid: state.user.uid,
+        moderatedAt: new Date().toISOString()
+      };
+
+      await firebaseClient.updateService(itemId, updates);
+    }
+
+    notify(t("msg.editorSaved"), "success");
+    closeAdminEditor();
+  } catch (error) {
+    console.error("Admin edit error:", error);
     notify(t("msg.moderationError"), "error");
   }
 }
@@ -1077,7 +1262,7 @@ function setupInteractions() {
     await firebaseClient.signOutUser();
   });
 
-  [refs.pendingPlacesList, refs.pendingServicesList].forEach((list) => {
+  [refs.pendingPlacesList, refs.pendingServicesList, refs.allPlacesList, refs.allServicesList].forEach((list) => {
     list?.addEventListener("click", async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
@@ -1093,6 +1278,9 @@ function setupInteractions() {
       await applyModeration(entity, itemId, action);
     });
   });
+
+  refs.adminEditorForm?.addEventListener("submit", saveAdminChanges);
+  refs.cancelEditorBtn?.addEventListener("click", closeAdminEditor);
 }
 
 function setupRevealOnScroll() {
@@ -1116,6 +1304,9 @@ function boot() {
   applyTranslations();
   renderAlerts();
   loadMunicipalAlerts();
+  if (!alertsRefreshTimer) {
+    alertsRefreshTimer = setInterval(loadMunicipalAlerts, 15 * 60 * 1000);
+  }
   setupInteractions();
   handleForms();
   setupRevealOnScroll();

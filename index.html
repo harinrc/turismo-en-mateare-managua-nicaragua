@@ -268,11 +268,113 @@
           <div id="pendingServicesList" class="moderation-list" aria-live="polite"></div>
         </article>
       </div>
+
+      <div class="forms-grid">
+        <article class="panel reveal">
+          <h3 data-i18n="admin.managePlaces">Gestionar lugares</h3>
+          <div id="allPlacesList" class="moderation-list" aria-live="polite"></div>
+        </article>
+
+        <article class="panel reveal">
+          <h3 data-i18n="admin.manageServices">Gestionar servicios</h3>
+          <div id="allServicesList" class="moderation-list" aria-live="polite"></div>
+        </article>
+      </div>
+
+      <form id="adminEditorForm" class="panel reveal admin-editor" hidden>
+        <h3 data-i18n="admin.editorTitle">Editor administrativo</h3>
+        <input type="hidden" id="editorEntity">
+        <input type="hidden" id="editorItemId">
+
+        <label>
+          <span data-i18n="admin.editorName">Nombre</span>
+          <input id="editorName" type="text" maxlength="80" required>
+        </label>
+
+        <label id="editorCategoryLabel">
+          <span data-i18n="publish.placeCategory">Categoría</span>
+          <select id="editorCategory">
+            <option value="naturaleza" data-i18n="guides.nature">Naturaleza</option>
+            <option value="cultura" data-i18n="guides.culture">Cultura</option>
+            <option value="aventura" data-i18n="guides.adventure">Aventura</option>
+          </select>
+        </label>
+
+        <label id="editorTypeLabel" hidden>
+          <span data-i18n="publish.serviceType">Tipo</span>
+          <select id="editorType">
+            <option value="alimentacion" data-i18n="publish.food">Alimentación</option>
+            <option value="hospedaje" data-i18n="publish.lodging">Hospedaje</option>
+            <option value="actividad" data-i18n="publish.activities">Actividades</option>
+          </select>
+        </label>
+
+        <label id="editorDescriptionLabel">
+          <span data-i18n="publish.description">Descripción</span>
+          <textarea id="editorDescription" rows="3" maxlength="260"></textarea>
+        </label>
+
+        <div class="row-2" id="editorCoordsRow">
+          <label>
+            <span>Lat</span>
+            <input id="editorLat" type="number" step="any">
+          </label>
+          <label>
+            <span>Lng</span>
+            <input id="editorLng" type="number" step="any">
+          </label>
+        </div>
+
+        <div class="row-2" id="editorServiceRow" hidden>
+          <label>
+            <span data-i18n="publish.contact">Contacto</span>
+            <input id="editorContact" type="text" maxlength="90">
+          </label>
+          <label>
+            <span data-i18n="publish.schedule">Horario</span>
+            <input id="editorSchedule" type="text" maxlength="80">
+          </label>
+        </div>
+
+        <label>
+          <span data-i18n="admin.editorImages">URLs de imágenes</span>
+          <textarea id="editorImageUrls" rows="2" placeholder="https://..." data-i18n-placeholder="publish.placeImageUrlsPlaceholder"></textarea>
+        </label>
+
+        <label>
+          <span data-i18n="admin.editorStatus">Estado</span>
+          <select id="editorStatus">
+            <option value="pending" data-i18n="admin.statusPending">Pendiente</option>
+            <option value="approved" data-i18n="admin.statusApproved">Aprobado</option>
+            <option value="rejected" data-i18n="admin.statusRejected">Rechazado</option>
+          </select>
+        </label>
+
+        <div class="moderation-actions">
+          <button class="btn btn-primary" type="submit" data-i18n="admin.saveChanges">Guardar cambios</button>
+          <button class="btn" id="cancelEditorBtn" type="button" data-i18n="admin.cancelEdit">Cancelar</button>
+        </div>
+      </form>
     </section>
   </main>
 
   <footer class="footer" id="contacto">
-    <p data-i18n="footer.text">Mateare Vivo · Turismo comunitario · Compatible con Android, iOS y Windows</p>
+    <div class="footer-grid">
+      <section>
+        <h3>Mateare Vivo</h3>
+        <p data-i18n="footer.text">Mateare Vivo · Turismo comunitario · Compatible con Android, iOS y Windows</p>
+      </section>
+      <section>
+        <h4 data-i18n="footer.links">Enlaces rápidos</h4>
+        <a href="#guias" data-i18n="hero.primaryCta">Explorar destinos</a>
+        <a href="#registro" data-i18n="hero.secondaryCta">Publicar emprendimiento</a>
+        <a href="#mapa" data-i18n="nav.map">Mapa y Rutas</a>
+      </section>
+      <section>
+        <h4 data-i18n="footer.contact">Contacto local</h4>
+        <p data-i18n="footer.contactText">Promoción turística comunitaria de Mateare, Managua.</p>
+      </section>
+    </div>
   </footer>
 
   <div id="toastRegion" class="toast" role="status" aria-live="polite"></div>

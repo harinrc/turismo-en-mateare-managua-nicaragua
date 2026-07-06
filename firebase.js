@@ -183,6 +183,22 @@ export function createFirebaseClient() {
 
     async deleteService(serviceId) {
       return deleteDoc(doc(db, "services", serviceId));
+    },
+
+    async updatePlace(placeId, updates) {
+      const placeRef = doc(db, "places", placeId);
+      return updateDoc(placeRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    },
+
+    async updateService(serviceId, updates) {
+      const serviceRef = doc(db, "services", serviceId);
+      return updateDoc(serviceRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
     }
   };
 }
