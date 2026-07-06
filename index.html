@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plataforma de turismo comunitario en Mateare, Managua, Nicaragua.">
+  <title>Mateare Vivo | Turismo Comunitario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="bg-layer" aria-hidden="true">
+    <span class="shape shape-1"></span>
+    <span class="shape shape-2"></span>
+    <span class="shape shape-3"></span>
+  </div>
+
+  <header class="topbar" id="inicio">
+    <a href="#inicio" class="brand">Mateare<span>Vivo</span></a>
+    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-label="Abrir menú">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav" id="mainNav" aria-label="Navegación principal">
+      <a href="#inicio" data-i18n="nav.home">Inicio</a>
+      <a href="#diagnostico" data-i18n="nav.diagnosis">Diagnóstico</a>
+      <a href="#guias" data-i18n="nav.guides">Guías</a>
+      <a href="#registro" data-i18n="nav.register">Publicar</a>
+      <a href="#mapa" data-i18n="nav.map">Mapa y Rutas</a>
+      <a href="#contacto" data-i18n="nav.contact">Contacto</a>
+      <div class="auth-box" aria-live="polite">
+        <span id="authUser" class="auth-user" data-i18n="auth.guest">Invitado</span>
+        <button id="signInBtn" class="auth-btn" type="button" data-i18n="auth.signIn">Entrar con Google</button>
+        <button id="signOutBtn" class="auth-btn" type="button" data-i18n="auth.signOut" hidden>Salir</button>
+      </div>
+      <select id="languageSelect" class="lang-select" aria-label="Idioma">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero section">
+      <div class="hero-content reveal">
+        <p class="eyebrow" data-i18n="hero.tag">Turismo comunitario en Nicaragua</p>
+        <h1 data-i18n="hero.title">Descubre Mateare con rutas, guías y servicios locales</h1>
+        <p class="hero-text" data-i18n="hero.description">
+          Plataforma digital para turistas nacionales y extranjeros que conecta emprendimientos,
+          lugares turísticos poco difundidos y experiencias auténticas en el municipio de Mateare.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#guias" data-i18n="hero.primaryCta">Explorar destinos</a>
+          <a class="btn btn-ghost" href="#registro" data-i18n="hero.secondaryCta">Publicar emprendimiento</a>
+        </div>
+      </div>
+      <div class="hero-panel reveal">
+        <h2 data-i18n="hero.panelTitle">Estado rápido del destino</h2>
+        <ul>
+          <li><strong id="quickWeather">--</strong> <span data-i18n="hero.weather">Clima actual</span></li>
+          <li><strong id="quickAlerts">--</strong> <span data-i18n="hero.alerts">Alertas activas</span></li>
+          <li><strong id="quickPosts">--</strong> <span data-i18n="hero.posts">Publicaciones comunitarias</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="diagnostico">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-i18n="diagnosis.tag">Diagnóstico territorial</p>
+        <h2 data-i18n="diagnosis.title">Digitalizar para visibilizar el turismo local</h2>
+        <p data-i18n="diagnosis.description">
+          El municipio cuenta con atractivos naturales, cultura viva y emprendimientos gastronómicos,
+          pero su difusión digital es limitada. Este portal centraliza información y fortalece la promoción turística.
+        </p>
+      </div>
+      <div class="diag-grid">
+        <article class="card reveal">
+          <h3 data-i18n="diagnosis.card1.title">Baja promoción</h3>
+          <p data-i18n="diagnosis.card1.text">Muchos destinos y servicios no tienen presencia web constante.</p>
+        </article>
+        <article class="card reveal">
+          <h3 data-i18n="diagnosis.card2.title">Necesidad de rutas</h3>
+          <p data-i18n="diagnosis.card2.text">El turista requiere orientación clara para llegar de forma segura y rápida.</p>
+        </article>
+        <article class="card reveal">
+          <h3 data-i18n="diagnosis.card3.title">Oportunidad económica</h3>
+          <p data-i18n="diagnosis.card3.text">La digitalización impulsa emprendedores y dinamiza la economía local.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="guias">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-i18n="guides.tag">Guía turística dinámica</p>
+        <h2 data-i18n="guides.title">Lugares recomendados en Mateare</h2>
+      </div>
+      <div class="toolbar reveal">
+        <label>
+          <span data-i18n="guides.searchLabel">Buscar</span>
+          <input type="search" id="searchGuide" placeholder="Ej: Mirador" data-i18n-placeholder="guides.searchPlaceholder">
+        </label>
+        <label>
+          <span data-i18n="guides.filterLabel">Categoría</span>
+          <select id="filterCategory">
+            <option value="all" data-i18n="guides.all">Todas</option>
+            <option value="naturaleza" data-i18n="guides.nature">Naturaleza</option>
+            <option value="cultura" data-i18n="guides.culture">Cultura</option>
+            <option value="aventura" data-i18n="guides.adventure">Aventura</option>
+          </select>
+        </label>
+      </div>
+      <div class="cards-grid" id="guideList" aria-live="polite"></div>
+    </section>
+
+    <section class="section weather-alert-grid" id="clima-alertas">
+      <article class="panel reveal" id="clima">
+        <div class="panel-head">
+          <p class="eyebrow" data-i18n="weather.tag">Clima en tiempo real</p>
+          <h2 data-i18n="weather.title">Consulta el estado climático</h2>
+        </div>
+        <div class="weather-controls">
+          <label for="weatherPlace" data-i18n="weather.destination">Destino</label>
+          <select id="weatherPlace"></select>
+          <button class="btn btn-primary" id="refreshWeather" data-i18n="weather.refresh">Actualizar</button>
+        </div>
+        <div class="weather-box" id="weatherOutput">
+          <p data-i18n="weather.loading">Cargando clima...</p>
+        </div>
+      </article>
+
+      <article class="panel reveal" id="alertas">
+        <div class="panel-head">
+          <p class="eyebrow" data-i18n="alerts.tag">Sistema de alertas</p>
+          <h2 data-i18n="alerts.title">Información útil para viajar</h2>
+        </div>
+        <ul class="alerts-list" id="alertsList" aria-live="polite"></ul>
+      </article>
+    </section>
+
+    <section class="section" id="registro">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-i18n="publish.tag">Registro comunitario</p>
+        <h2 data-i18n="publish.title">Publica lugares y servicios turísticos</h2>
+        <p id="authNotice" class="auth-notice" data-i18n="auth.required">
+          Inicia sesion con Google para publicar lugares y servicios.
+        </p>
+      </div>
+
+      <div class="forms-grid">
+        <form class="panel reveal" id="placeForm">
+          <h3 data-i18n="publish.placeTitle">Registrar lugar turístico</h3>
+          <label>
+            <span data-i18n="publish.placeName">Nombre del lugar</span>
+            <input required name="name" type="text" maxlength="80">
+          </label>
+          <label>
+            <span data-i18n="publish.placeCategory">Categoría</span>
+            <select name="category" required>
+              <option value="naturaleza" data-i18n="guides.nature">Naturaleza</option>
+              <option value="cultura" data-i18n="guides.culture">Cultura</option>
+              <option value="aventura" data-i18n="guides.adventure">Aventura</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="publish.description">Descripción</span>
+            <textarea required name="description" rows="3" maxlength="220"></textarea>
+          </label>
+          <label>
+            <span data-i18n="publish.placeImageUrl">URL de imagen (opcional)</span>
+            <input name="imageUrl" type="url" placeholder="https://..." data-i18n-placeholder="publish.placeImageUrlPlaceholder">
+          </label>
+          <label>
+            <span data-i18n="publish.placeImageFile">Subir imagen (opcional)</span>
+            <input id="placeImageFile" name="imageFile" type="file" accept="image/*">
+          </label>
+          <img id="placeImagePreview" class="place-image-preview" src="" alt="Vista previa" hidden>
+          <div class="row-2">
+            <label>
+              <span>Lat</span>
+              <input required name="lat" type="number" step="any">
+            </label>
+            <label>
+              <span>Lng</span>
+              <input required name="lng" type="number" step="any">
+            </label>
+          </div>
+          <button class="btn btn-primary" type="submit" data-i18n="publish.publishPlace">Publicar lugar</button>
+        </form>
+
+        <form class="panel reveal" id="serviceForm">
+          <h3 data-i18n="publish.serviceTitle">Registrar servicio turístico</h3>
+          <label>
+            <span data-i18n="publish.serviceName">Nombre del servicio</span>
+            <input required name="name" type="text" maxlength="80">
+          </label>
+          <label>
+            <span data-i18n="publish.serviceType">Tipo</span>
+            <select name="type" required>
+              <option value="alimentacion" data-i18n="publish.food">Alimentación</option>
+              <option value="hospedaje" data-i18n="publish.lodging">Hospedaje</option>
+              <option value="actividad" data-i18n="publish.activities">Actividades</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="publish.contact">Contacto</span>
+            <input required name="contact" type="text" maxlength="80">
+          </label>
+          <label>
+            <span data-i18n="publish.schedule">Horario</span>
+            <input required name="schedule" type="text" maxlength="60">
+          </label>
+          <button class="btn btn-primary" type="submit" data-i18n="publish.publishService">Publicar servicio</button>
+        </form>
+      </div>
+
+      <div class="community-feed reveal">
+        <h3 data-i18n="publish.feedTitle">Publicaciones comunitarias</h3>
+        <div class="cards-grid" id="communityFeed"></div>
+      </div>
+    </section>
+
+    <section class="section" id="mapa">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-i18n="map.tag">Ubicación y rutas</p>
+        <h2 data-i18n="map.title">Mapa interactivo de destinos</h2>
+      </div>
+      <div class="map-wrap reveal">
+        <div id="map"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="contacto">
+    <p data-i18n="footer.text">Mateare Vivo · Turismo comunitario · Compatible con Android, iOS y Windows</p>
+  </footer>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>
