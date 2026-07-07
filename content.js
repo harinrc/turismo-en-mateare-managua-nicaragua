@@ -77,9 +77,9 @@ export const initialAlerts = [
 
 // Reemplaza estas URLs por tus propias fotos cuando las subas.
 export const heroBackgroundImages = [
-  "mateare1.jpg",
-  "mateare2.jpg",
-  "mateare3.jpg",
+  "mateare1.jpeg",
+  "mateare2.jpeg",
+  "mateare3.jpeg",
   "Mateare_Barco.jpg"
 ];
 
