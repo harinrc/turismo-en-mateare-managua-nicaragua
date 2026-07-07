@@ -1,4 +1,4 @@
-import { initialPlaces, initialServices, initialAlerts, i18n } from "./content.js";
+import { initialPlaces, initialServices, initialAlerts, i18n, heroBackgroundImages } from "./content.js";
 import { createFirebaseClient } from "./firebase.js";
 
 const STORAGE_KEYS = {
@@ -14,6 +14,7 @@ const ALERTS_MAX_AGE_DAYS = 14;
 const ALERTS_EXTENDED_MAX_AGE_DAYS = 45;
 const ALERTS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
+const HERO_BG_CHANGE_INTERVAL_MS = 8 * 1000;
 const ALERTS_PRIMARY_SEARCH_QUERIES = [
   "Mateare Managua",
   "Mateare",
@@ -55,6 +56,7 @@ const refs = {
   weatherOutput: document.getElementById("weatherOutput"),
   alertsList: document.getElementById("alertsList"),
   alertsSyncStatus: document.getElementById("alertsSyncStatus"),
+  heroBgCarousel: document.getElementById("heroBgCarousel"),
   quickWeather: document.getElementById("quickWeather"),
   quickAlerts: document.getElementById("quickAlerts"),
   quickPosts: document.getElementById("quickPosts"),
@@ -109,6 +111,8 @@ let alertsRefreshTimer = null;
 let lastAlertsSyncAt = 0;
 let alertsLastSuccessAt = 0;
 let alertsSyncState = "idle";
+let heroBgTimer = null;
+let heroBgCurrentIndex = 0;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -866,7 +870,7 @@ function openRoute(placeId) {
 }
 
 async function fetchWeather(lat, lng) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,rain&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,rain,weather_code,is_day&timezone=auto`;
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -874,6 +878,51 @@ async function fetchWeather(lat, lng) {
   }
 
   return response.json();
+}
+
+function getWeatherConditionKey(weatherCode) {
+  if (weatherCode === 0) return "weather.condition.clear";
+  if ([1, 2].includes(weatherCode)) return "weather.condition.partlyCloudy";
+  if (weatherCode === 3) return "weather.condition.cloudy";
+  if ([45, 48].includes(weatherCode)) return "weather.condition.fog";
+  if ([51, 53, 55, 56, 57].includes(weatherCode)) return "weather.condition.drizzle";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) return "weather.condition.rain";
+  if ([95, 96, 99].includes(weatherCode)) return "weather.condition.storm";
+  return "weather.condition.cloudy";
+}
+
+function getWeatherSuggestionKey(current) {
+  const rain = Number(current.rain || 0);
+  const wind = Number(current.wind_speed_10m || 0);
+  const temp = Number(current.temperature_2m || 0);
+  const isDay = Number(current.is_day || 0) === 1;
+
+  if (rain >= 0.3 || ["weather.condition.rain", "weather.condition.storm"].includes(getWeatherConditionKey(current.weather_code))) {
+    return "weather.suggestion.rain";
+  }
+
+  if (wind >= 28) {
+    return "weather.suggestion.wind";
+  }
+
+  if (isDay && temp >= 34) {
+    return "weather.suggestion.heat";
+  }
+
+  if (!isDay && temp <= 22) {
+    return "weather.suggestion.coolNight";
+  }
+
+  const conditionKey = getWeatherConditionKey(current.weather_code);
+  if (conditionKey === "weather.condition.clear" && isDay) {
+    return "weather.suggestion.sunDay";
+  }
+
+  if (conditionKey === "weather.condition.clear" && !isDay) {
+    return "weather.suggestion.clearNight";
+  }
+
+  return "weather.suggestion.cloudy";
 }
 
 async function renderWeather() {
@@ -891,15 +940,25 @@ async function renderWeather() {
   try {
     const data = await fetchWeather(place.lat, place.lng);
     const current = data.current;
+    const conditionKey = getWeatherConditionKey(Number(current.weather_code));
+    const suggestionKey = getWeatherSuggestionKey(current);
+    const isDay = Number(current.is_day || 0) === 1;
+    const periodLabel = isDay ? t("weather.periodDay") : t("weather.periodNight");
+    const conditionLabel = t(conditionKey);
+    const suggestionLabel = t(suggestionKey);
+
     refs.weatherOutput.innerHTML = `
       <h3>${place.name}</h3>
       <p><strong>${t("weather.temp")}:</strong> ${current.temperature_2m} °C</p>
       <p><strong>${t("weather.wind")}:</strong> ${current.wind_speed_10m} km/h</p>
       <p><strong>${t("weather.rain")}:</strong> ${current.rain} mm</p>
+      <p><strong>${t("weather.condition")}:</strong> ${conditionLabel}</p>
+      <p><strong>${t("weather.period")}:</strong> ${periodLabel}</p>
+      <p><strong>${t("weather.suggestion")}:</strong> ${suggestionLabel}</p>
       <small>${t("weather.updated")}: ${current.time}</small>
     `;
 
-    refs.quickWeather.textContent = `${current.temperature_2m} °C`;
+    refs.quickWeather.textContent = `${current.temperature_2m} °C · ${conditionLabel}`;
   } catch {
     refs.weatherOutput.innerHTML = `<p>${t("weather.error")}</p>`;
     refs.quickWeather.textContent = "--";
@@ -1648,6 +1707,52 @@ function setupInteractions() {
   refs.cancelEditorBtn?.addEventListener("click", closeAdminEditor);
 }
 
+function renderHeroBackground(index) {
+  if (!refs.heroBgCarousel) return;
+  const slides = refs.heroBgCarousel.querySelectorAll(".hero-bg-slide");
+  slides.forEach((slide, slideIndex) => {
+    slide.classList.toggle("is-active", slideIndex === index);
+  });
+}
+
+function initHeroBackgroundCarousel() {
+  if (!refs.heroBgCarousel) return;
+
+  const images = Array.isArray(heroBackgroundImages)
+    ? heroBackgroundImages.filter((url) => typeof url === "string" && url.trim())
+    : [];
+
+  refs.heroBgCarousel.innerHTML = "";
+
+  if (!images.length) {
+    return;
+  }
+
+  images.forEach((src, index) => {
+    const image = document.createElement("img");
+    image.className = `hero-bg-slide${index === 0 ? " is-active" : ""}`;
+    image.src = src;
+    image.alt = "";
+    image.loading = index === 0 ? "eager" : "lazy";
+    refs.heroBgCarousel.appendChild(image);
+  });
+
+  heroBgCurrentIndex = 0;
+
+  if (heroBgTimer) {
+    clearInterval(heroBgTimer);
+  }
+
+  if (images.length < 2) {
+    return;
+  }
+
+  heroBgTimer = setInterval(() => {
+    heroBgCurrentIndex = (heroBgCurrentIndex + 1) % images.length;
+    renderHeroBackground(heroBgCurrentIndex);
+  }, HERO_BG_CHANGE_INTERVAL_MS);
+}
+
 function setupRevealOnScroll() {
   const observer = new IntersectionObserver(
     (entries) => {
@@ -1666,6 +1771,7 @@ function setupRevealOnScroll() {
 }
 
 function boot() {
+  initHeroBackgroundCarousel();
   applyTranslations();
   renderAlerts();
   loadMunicipalAlerts({ force: true });

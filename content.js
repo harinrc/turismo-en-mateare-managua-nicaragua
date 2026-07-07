@@ -75,6 +75,13 @@ export const initialAlerts = [
   }
 ];
 
+// Reemplaza estas URLs por tus propias fotos cuando las subas.
+export const heroBackgroundImages = [
+  "mateare1.jpg",
+  "mateare2.jpg",
+  "Mateare_Barco.jpg"
+];
+
 export const i18n = {
   es: {
     "nav.home": "Inicio",
@@ -122,6 +129,25 @@ export const i18n = {
     "weather.destination": "Destino",
     "weather.refresh": "Actualizar",
     "weather.loading": "Cargando clima...",
+    "weather.condition": "Condicion",
+    "weather.period": "Momento",
+    "weather.periodDay": "Dia",
+    "weather.periodNight": "Noche",
+    "weather.suggestion": "Sugerencia",
+    "weather.condition.clear": "Despejado",
+    "weather.condition.partlyCloudy": "Parcialmente nublado",
+    "weather.condition.cloudy": "Nublado",
+    "weather.condition.fog": "Neblina",
+    "weather.condition.drizzle": "Llovizna",
+    "weather.condition.rain": "Lluvia",
+    "weather.condition.storm": "Tormenta",
+    "weather.suggestion.sunDay": "Excelente para recorrer miradores. Lleva agua y protector solar.",
+    "weather.suggestion.clearNight": "Noche tranquila para actividades cortas. Usa ropa ligera y mantente en rutas seguras.",
+    "weather.suggestion.rain": "Lleva paraguas o capa y calzado antideslizante para senderos.",
+    "weather.suggestion.wind": "Hay viento fuerte. Evita zonas abiertas y asegura gorra o sombrero.",
+    "weather.suggestion.heat": "Calor intenso. Hidratarse cada 30 minutos y preferir sombra.",
+    "weather.suggestion.coolNight": "Temperatura fresca de noche. Lleva sueter ligero.",
+    "weather.suggestion.cloudy": "Clima estable para paseos. Ideal para rutas culturales y gastronomia local.",
     "alerts.tag": "Sistema de alertas",
     "alerts.title": "Informacion util para viajar",
     "alerts.readMore": "Leer noticia",
@@ -273,6 +299,25 @@ export const i18n = {
     "weather.destination": "Destination",
     "weather.refresh": "Refresh",
     "weather.loading": "Loading weather...",
+    "weather.condition": "Condition",
+    "weather.period": "Period",
+    "weather.periodDay": "Day",
+    "weather.periodNight": "Night",
+    "weather.suggestion": "Suggestion",
+    "weather.condition.clear": "Clear",
+    "weather.condition.partlyCloudy": "Partly cloudy",
+    "weather.condition.cloudy": "Cloudy",
+    "weather.condition.fog": "Fog",
+    "weather.condition.drizzle": "Drizzle",
+    "weather.condition.rain": "Rain",
+    "weather.condition.storm": "Storm",
+    "weather.suggestion.sunDay": "Great for viewpoints. Bring water and sunscreen.",
+    "weather.suggestion.clearNight": "Calm night for short activities. Wear light layers and stay on safe routes.",
+    "weather.suggestion.rain": "Bring an umbrella or rain jacket and non-slip shoes for trails.",
+    "weather.suggestion.wind": "Strong wind conditions. Avoid exposed areas and secure hats.",
+    "weather.suggestion.heat": "High heat. Hydrate every 30 minutes and seek shade.",
+    "weather.suggestion.coolNight": "Cool night temperatures. Bring a light sweater.",
+    "weather.suggestion.cloudy": "Stable weather for walks. Great for cultural routes and local food.",
     "alerts.tag": "Alert system",
     "alerts.title": "Useful travel info",
     "alerts.readMore": "Read article",
