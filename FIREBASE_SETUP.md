@@ -55,6 +55,11 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == uid;
     }
+
+    match /services/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
 ```

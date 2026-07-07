@@ -333,6 +333,42 @@ async function resolveImages(data, options) {
   return allUrls;
 }
 
+async function resolveServiceImages(data) {
+  const rawUrls = parseImageUrlsText(String(data.get("imageUrls") || ""));
+  const validUrls = rawUrls.map((url) => {
+    if (!isValidImageUrl(url)) {
+      throw new Error("invalid-image-url");
+    }
+    return url;
+  });
+
+  const files = data
+    .getAll("imageFiles")
+    .filter((entry) => entry instanceof File && entry.size > 0);
+
+  const uploadedUrls = [];
+  let hadUploadErrors = false;
+
+  for (const file of files) {
+    try {
+      if (state.useFirebase && state.user) {
+        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, "services");
+        uploadedUrls.push(uploadedUrl);
+      } else {
+        const localUrl = await readFileAsDataUrl(file);
+        uploadedUrls.push(localUrl);
+      }
+    } catch {
+      hadUploadErrors = true;
+    }
+  }
+
+  return {
+    imageUrls: [...uploadedUrls, ...validUrls],
+    hadUploadErrors
+  };
+}
+
 function applyTranslations() {
   document.documentElement.lang = state.lang;
   document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -1229,16 +1265,15 @@ async function publishService(data) {
   }
 
   let imageUrls = [];
+  let hadImageUploadErrors = false;
 
   try {
-    imageUrls = await resolveImages(data, {
-      fileField: "imageFiles",
-      urlField: "imageUrls",
-      uploadFolder: "services"
-    });
+    const resolved = await resolveServiceImages(data);
+    imageUrls = resolved.imageUrls;
+    hadImageUploadErrors = resolved.hadUploadErrors;
   } catch (error) {
     const message = String(error?.message || "");
-    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.imageUploadError"), "error");
+    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.serviceSaveError"), "error");
     return;
   }
 
@@ -1271,6 +1306,11 @@ async function publishService(data) {
 
   refs.serviceForm.reset();
   const serviceMessage = payload.status === "pending" ? t("msg.servicePending") : t("msg.serviceSaved");
+  if (hadImageUploadErrors) {
+    notify(`${serviceMessage} ${t("msg.imageUploadPartial")}`, "info");
+    return;
+  }
+
   notify(serviceMessage, "success");
 }
 
@@ -1326,6 +1366,7 @@ async function saveAdminChanges(event) {
   if (!entity || !itemId) return;
 
   const status = refs.editorStatus.value;
+  let hadServiceImageUploadErrors = false;
 
   try {
     const rawUrls = parseImageUrlsText(refs.editorImageUrls.value);
@@ -1340,12 +1381,22 @@ async function saveAdminChanges(event) {
 
     const uploadedUrls = [];
     for (const file of imageFiles) {
-      if (state.useFirebase && state.user) {
-        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, entity === "service" ? "services" : "places");
-        uploadedUrls.push(uploadedUrl);
-      } else {
-        const localUrl = await readFileAsDataUrl(file);
-        uploadedUrls.push(localUrl);
+      try {
+        if (state.useFirebase && state.user) {
+          const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, entity === "service" ? "services" : "places");
+          uploadedUrls.push(uploadedUrl);
+        } else {
+          const localUrl = await readFileAsDataUrl(file);
+          uploadedUrls.push(localUrl);
+        }
+      } catch {
+        if (entity === "service") {
+          hadServiceImageUploadErrors = true;
+          continue;
+        }
+
+        const wrapped = new Error("image-upload-failed");
+        throw wrapped;
       }
     }
 
@@ -1389,7 +1440,11 @@ async function saveAdminChanges(event) {
       await firebaseClient.updateService(itemId, updates);
     }
 
-    notify(t("msg.editorSaved"), "success");
+    if (entity === "service" && hadServiceImageUploadErrors) {
+      notify(`${t("msg.editorSaved")} ${t("msg.imageUploadPartial")}`, "info");
+    } else {
+      notify(t("msg.editorSaved"), "success");
+    }
     closeAdminEditor();
   } catch (error) {
     console.error("Admin edit error:", error);
