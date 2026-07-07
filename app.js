@@ -11,13 +11,20 @@ const DEFAULT_PLACE_IMAGE =
 
 const ALERTS_MAX_ITEMS = 8;
 const ALERTS_MAX_AGE_DAYS = 14;
+const ALERTS_EXTENDED_MAX_AGE_DAYS = 45;
 const ALERTS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
-const ALERTS_SEARCH_QUERIES = [
-  "Mateare turismo Managua Nicaragua when:7d",
-  "Laguna de Xiloa Mateare turismo when:14d",
-  "Mateare emprendimientos turisticos Nicaragua when:14d",
-  "Alcaldia de Mateare turismo when:14d"
+const ALERTS_PRIMARY_SEARCH_QUERIES = [
+  "Mateare Managua",
+  "Mateare",
+  "Laguna de Xiloa",
+  "turismo en Mateare",
+  "alcaldia de Mateare"
+];
+const ALERTS_BACKUP_SEARCH_QUERIES = [
+  "Managua turismo",
+  "Nicaragua turismo",
+  "INTUR Nicaragua"
 ];
 
 const firebaseClient = createFirebaseClient();
@@ -47,6 +54,7 @@ const refs = {
   refreshWeather: document.getElementById("refreshWeather"),
   weatherOutput: document.getElementById("weatherOutput"),
   alertsList: document.getElementById("alertsList"),
+  alertsSyncStatus: document.getElementById("alertsSyncStatus"),
   quickWeather: document.getElementById("quickWeather"),
   quickAlerts: document.getElementById("quickAlerts"),
   quickPosts: document.getElementById("quickPosts"),
@@ -99,6 +107,8 @@ let placesUnsubscribe = null;
 let servicesUnsubscribe = null;
 let alertsRefreshTimer = null;
 let lastAlertsSyncAt = 0;
+let alertsLastSuccessAt = 0;
+let alertsSyncState = "idle";
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -336,6 +346,49 @@ function applyTranslations() {
   });
 
   updateAuthUI();
+  renderAlertsSyncStatus();
+}
+
+function formatSyncDateTime(timestampMs) {
+  const safeDate = new Date(timestampMs);
+  if (Number.isNaN(safeDate.getTime())) return "";
+
+  const locale = state.lang === "en" ? "en-US" : "es-NI";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(safeDate);
+}
+
+function renderAlertsSyncStatus() {
+  if (!refs.alertsSyncStatus) return;
+
+  if (alertsSyncState === "loading") {
+    refs.alertsSyncStatus.textContent = t("alerts.sync.loading");
+    return;
+  }
+
+  if (alertsSyncState === "error") {
+    if (alertsLastSuccessAt) {
+      refs.alertsSyncStatus.textContent = `${t("alerts.sync.error")} ${t("alerts.sync.updated")}: ${formatSyncDateTime(alertsLastSuccessAt)}`;
+      return;
+    }
+
+    refs.alertsSyncStatus.textContent = t("alerts.sync.error");
+    return;
+  }
+
+  if (alertsSyncState === "stale") {
+    refs.alertsSyncStatus.textContent = t("alerts.sync.noRecent");
+    return;
+  }
+
+  if (alertsLastSuccessAt) {
+    refs.alertsSyncStatus.textContent = `${t("alerts.sync.updated")}: ${formatSyncDateTime(alertsLastSuccessAt)}`;
+    return;
+  }
+
+  refs.alertsSyncStatus.textContent = t("alerts.sync.never");
 }
 
 function formatCategory(category) {
@@ -474,6 +527,7 @@ function renderAlerts() {
   });
 
   refs.quickAlerts.textContent = String(state.alerts.length);
+  renderAlertsSyncStatus();
 }
 
 function stripHtml(value) {
@@ -518,6 +572,26 @@ function isRecentEntry(entryDateMs) {
   if (!entryDateMs) return false;
   const maxAgeMs = ALERTS_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
   return Date.now() - entryDateMs <= maxAgeMs;
+}
+
+function isRecentEntryByDays(entryDateMs, maxAgeDays) {
+  if (!entryDateMs) return false;
+  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+  return Date.now() - entryDateMs <= maxAgeMs;
+}
+
+function getEntryRelevanceScore(entry) {
+  const text = `${entry.title || ""} ${stripHtml(entry.description || "")}`.toLowerCase();
+  let score = 0;
+
+  if (text.includes("mateare")) score += 6;
+  if (text.includes("xiloa")) score += 5;
+  if (text.includes("laguna")) score += 2;
+  if (text.includes("turismo") || text.includes("turistica") || text.includes("turistico")) score += 3;
+  if (text.includes("managua")) score += 2;
+  if (text.includes("nicaragua")) score += 1;
+
+  return score;
 }
 
 function getEntrySourceLabel(entry) {
@@ -577,17 +651,24 @@ async function loadMunicipalAlerts(options = {}) {
   }
 
   lastAlertsSyncAt = now;
+  alertsSyncState = "loading";
+  renderAlertsSyncStatus();
 
   try {
+    const allQueries = [...ALERTS_PRIMARY_SEARCH_QUERIES, ...ALERTS_BACKUP_SEARCH_QUERIES];
     const responses = await Promise.allSettled(
-      ALERTS_SEARCH_QUERIES.map((query) => fetchGoogleNewsQuery(query))
+      allQueries.map((query) => fetchGoogleNewsQuery(query))
     );
 
     const combined = responses
       .filter((result) => result.status === "fulfilled")
       .flatMap((result) => result.value);
 
-    if (!combined.length) return;
+    if (!combined.length) {
+      alertsSyncState = "error";
+      renderAlertsSyncStatus();
+      return;
+    }
 
     const uniqueByLink = new Map();
     combined.forEach((entry) => {
@@ -596,13 +677,18 @@ async function loadMunicipalAlerts(options = {}) {
       uniqueByLink.set(key, entry);
     });
 
-    const freshEntries = [...uniqueByLink.values()]
-      .map((entry) => ({
-        entry,
-        dateMs: toDateMs(entry.pubDate || entry.published || entry.isoDate)
-      }))
-      .filter(({ dateMs }) => isRecentEntry(dateMs))
-      .sort((a, b) => b.dateMs - a.dateMs)
+    const normalizedEntries = [...uniqueByLink.values()].map((entry) => {
+      const dateMs = toDateMs(entry.pubDate || entry.published || entry.isoDate);
+      const relevance = getEntryRelevanceScore(entry);
+      return { entry, dateMs, relevance };
+    });
+
+    const buildAlertItems = (maxAgeDays) => normalizedEntries
+      .filter(({ dateMs }) => isRecentEntryByDays(dateMs, maxAgeDays))
+      .sort((a, b) => {
+        if (b.relevance !== a.relevance) return b.relevance - a.relevance;
+        return b.dateMs - a.dateMs;
+      })
       .slice(0, ALERTS_MAX_ITEMS)
       .map(({ entry, dateMs }, index) => {
         const cleanTitle = stripHtml(entry.title || "Noticia local");
@@ -625,12 +711,25 @@ async function loadMunicipalAlerts(options = {}) {
         };
       });
 
-    if (!freshEntries.length) return;
+    let freshEntries = buildAlertItems(ALERTS_MAX_AGE_DAYS);
+    if (!freshEntries.length) {
+      freshEntries = buildAlertItems(ALERTS_EXTENDED_MAX_AGE_DAYS);
+    }
+
+    if (!freshEntries.length) {
+      alertsSyncState = "stale";
+      renderAlertsSyncStatus();
+      return;
+    }
 
     state.alerts = freshEntries;
+    alertsLastSuccessAt = Date.now();
+    alertsSyncState = "success";
 
     renderAlerts();
   } catch {
+    alertsSyncState = "error";
+    renderAlertsSyncStatus();
     // Keep static fallback alerts when external sources are unavailable.
   }
 }

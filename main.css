@@ -498,6 +498,12 @@ form textarea {
   gap: 0.65rem;
 }
 
+.alerts-sync-status {
+  margin: 0.35rem 0 0;
+  color: #5a6d7b;
+  font-size: 0.8rem;
+}
+
 .alert-item {
   border-radius: 0.8rem;
   border-left: 4px solid var(--accent-2);
