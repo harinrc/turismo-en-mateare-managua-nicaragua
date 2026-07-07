@@ -79,6 +79,7 @@ export const initialAlerts = [
 export const heroBackgroundImages = [
   "mateare1.jpg",
   "mateare2.jpg",
+  "mateare3.jpg",
   "Mateare_Barco.jpg"
 ];
 
