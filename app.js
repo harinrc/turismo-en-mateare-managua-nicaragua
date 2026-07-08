@@ -925,6 +925,23 @@ function getWeatherSuggestionKey(current) {
   return "weather.suggestion.cloudy";
 }
 
+function getWeatherIcon(current) {
+  const weatherCode = Number(current.weather_code);
+  const isDay = Number(current.is_day || 0) === 1;
+  const conditionKey = getWeatherConditionKey(weatherCode);
+
+  if (conditionKey === "weather.condition.storm") return "⛈️";
+  if (conditionKey === "weather.condition.rain") return "🌧️";
+  if (conditionKey === "weather.condition.drizzle") return "🌦️";
+  if (conditionKey === "weather.condition.fog") return "🌫️";
+  if (conditionKey === "weather.condition.cloudy") return "☁️";
+  if (conditionKey === "weather.condition.partlyCloudy") {
+    return isDay ? "🌤️" : "☁️";
+  }
+
+  return isDay ? "☀️" : "🌙";
+}
+
 async function renderWeather() {
   const placeId = refs.weatherPlace.value;
   const visiblePlaces = getVisiblePlaces();
@@ -946,9 +963,11 @@ async function renderWeather() {
     const periodLabel = isDay ? t("weather.periodDay") : t("weather.periodNight");
     const conditionLabel = t(conditionKey);
     const suggestionLabel = t(suggestionKey);
+    const weatherIcon = getWeatherIcon(current);
 
     refs.weatherOutput.innerHTML = `
       <h3>${place.name}</h3>
+      <p class="weather-icon-line"><span class="weather-icon" aria-hidden="true">${weatherIcon}</span> ${conditionLabel} · ${periodLabel}</p>
       <p><strong>${t("weather.temp")}:</strong> ${current.temperature_2m} °C</p>
       <p><strong>${t("weather.wind")}:</strong> ${current.wind_speed_10m} km/h</p>
       <p><strong>${t("weather.rain")}:</strong> ${current.rain} mm</p>
@@ -958,7 +977,7 @@ async function renderWeather() {
       <small>${t("weather.updated")}: ${current.time}</small>
     `;
 
-    refs.quickWeather.textContent = `${current.temperature_2m} °C · ${conditionLabel}`;
+    refs.quickWeather.textContent = `${weatherIcon} ${current.temperature_2m} °C · ${conditionLabel}`;
   } catch {
     refs.weatherOutput.innerHTML = `<p>${t("weather.error")}</p>`;
     refs.quickWeather.textContent = "--";

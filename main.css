@@ -529,6 +529,23 @@ form textarea {
   padding: 0.9rem;
 }
 
+.weather-icon-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.2rem 0 0.65rem;
+  padding: 0.36rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(15, 42, 61, 0.08);
+  color: #16364b;
+  font-weight: 700;
+}
+
+.weather-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .alerts-list {
   list-style: none;
   margin: 0.4rem 0 0;
