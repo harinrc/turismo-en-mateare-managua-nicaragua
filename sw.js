@@ -1,4 +1,4 @@
-const CACHE_NAME = "mateare-vivo-v11";
+const CACHE_NAME = "mateare-vivo-v12";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,6 +12,17 @@ const APP_SHELL = [
   "./icon-192.svg",
   "./icon-512.svg"
 ];
+
+const NETWORK_FIRST_PATHS = new Set([
+  "/turismo-en-mateare-managua-nicaragua/",
+  "/turismo-en-mateare-managua-nicaragua/index.html",
+  "/turismo-en-mateare-managua-nicaragua/main.css",
+  "/turismo-en-mateare-managua-nicaragua/app.js",
+  "/turismo-en-mateare-managua-nicaragua/content.js",
+  "/turismo-en-mateare-managua-nicaragua/firebase.js",
+  "/turismo-en-mateare-managua-nicaragua/firebase-config.js",
+  "/turismo-en-mateare-managua-nicaragua/manifest.json"
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -57,6 +68,19 @@ self.addEventListener("fetch", (event) => {
   if (!isSameOrigin) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  if (NETWORK_FIRST_PATHS.has(url.pathname)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

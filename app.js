@@ -1231,7 +1231,8 @@ function updateAuthUI() {
   refs.signOutBtn.hidden = true;
   refs.authNotice.textContent = t("auth.required");
   refs.authNotice.classList.remove("ok");
-  setFormsEnabled(false);
+  // Keep forms interactive so users can type and receive explicit sign-in feedback on submit.
+  setFormsEnabled(true);
 }
 
 function updateAdminUI() {
@@ -1652,12 +1653,11 @@ function setupFirebaseRealtime() {
       { includeUnapproved },
       (places) => {
         const normalized = sortByCreatedAtDesc(places.map(normalizePlace));
-        state.places = normalized.length ? normalized : [...initialPlaces].map(normalizePlace);
+        state.places = normalized;
         refreshUiData();
       },
       () => {
-        state.places = [...initialPlaces].map(normalizePlace);
-        refreshUiData();
+        // Keep current state when realtime temporarily fails to avoid flickering back to seed data.
         refs.authNotice.textContent = t("msg.firebaseLoadError");
         refs.authNotice.classList.remove("ok");
       }
@@ -1667,12 +1667,11 @@ function setupFirebaseRealtime() {
       { includeUnapproved },
       (services) => {
         const normalized = sortByCreatedAtDesc(services.map(normalizeService));
-        state.services = normalized.length ? normalized : [...initialServices].map(normalizeService);
+        state.services = normalized;
         refreshUiData();
       },
       () => {
-        state.services = [...initialServices].map(normalizeService);
-        refreshUiData();
+        // Keep current state when realtime temporarily fails to avoid flickering back to seed data.
         refs.authNotice.textContent = t("msg.firebaseLoadError");
         refs.authNotice.classList.remove("ok");
       }
@@ -1898,12 +1897,14 @@ function boot() {
   handleForms();
   setupRevealOnScroll();
   initMap();
-  // Render base content immediately so the UI is visible even before realtime sync.
-  refreshUiData();
 
   if (state.useFirebase) {
+    // Avoid showing seed/demo content before realtime data arrives.
+    state.places = [];
+    state.services = [];
+    refreshUiData();
     setupFirebaseRealtime();
-    setFormsEnabled(false);
+    setFormsEnabled(true);
     updateAdminUI();
   } else {
     state.places = loadFromStorage(STORAGE_KEYS.places, state.places).map(normalizePlace);
