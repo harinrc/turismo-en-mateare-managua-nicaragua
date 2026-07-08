@@ -131,6 +131,7 @@ let lightboxScale = 1;
 let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchStartX = 0;
+let placeCardFocusTimer = null;
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
 const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -510,6 +511,7 @@ function renderGuides() {
   filtered.forEach((place) => {
     const card = document.createElement("article");
     card.className = "card place-card";
+    card.dataset.placeId = place.id;
 
     const tags = (place.tags ?? []).map((tag) => `<span class="badge">${tag}</span>`).join("");
     const gallery = buildFadeSlideshow(place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE], place.name);
@@ -897,12 +899,52 @@ function redrawMarkers() {
     marker.bindPopup(`
       <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}">
       <strong>${place.name}</strong><br>${place.description}
+      <div class="actions">
+        <button class="btn btn-primary btn-map-card" type="button" data-map-card="${place.id}">${t("map.viewCard")}</button>
+      </div>
     `);
     marker.on("click", () => {
       state.selectedPlaceId = place.id;
     });
     state.markers.push(marker);
   });
+}
+
+function focusPlaceCard(placeId) {
+  if (!refs.guideList) return;
+
+  const place = getVisiblePlaces().find((item) => item.id === placeId);
+  if (!place) return;
+
+  if (refs.searchGuide && refs.searchGuide.value) {
+    refs.searchGuide.value = "";
+  }
+
+  if (refs.filterCategory && refs.filterCategory.value !== "all") {
+    refs.filterCategory.value = "all";
+  }
+
+  renderGuides();
+
+  const cards = [...refs.guideList.querySelectorAll(".place-card")];
+  const card = cards.find((item) => item.getAttribute("data-place-id") === placeId);
+  if (!(card instanceof HTMLElement)) return;
+
+  cards.forEach((item) => item.classList.remove("is-map-focused"));
+  card.classList.add("is-map-focused");
+
+  document.getElementById("guias")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(() => {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 180);
+
+  if (placeCardFocusTimer) {
+    clearTimeout(placeCardFocusTimer);
+  }
+
+  placeCardFocusTimer = setTimeout(() => {
+    card.classList.remove("is-map-focused");
+  }, 1800);
 }
 
 function goToPlace(placeId) {
@@ -1793,6 +1835,17 @@ function setupInteractions() {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    const mapCardButton = target.closest("button[data-map-card]");
+    if (mapCardButton instanceof HTMLButtonElement) {
+      const placeId = mapCardButton.getAttribute("data-map-card");
+      if (!placeId) return;
+
+      goToPlace(placeId);
+      focusPlaceCard(placeId);
+      state.map?.closePopup();
+      return;
+    }
 
     const slideshow = target.closest(".fade-slideshow");
     if (!(slideshow instanceof HTMLElement)) return;

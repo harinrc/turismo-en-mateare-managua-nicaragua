@@ -484,6 +484,11 @@ form textarea {
   gap: 0.65rem;
 }
 
+.place-card.is-map-focused {
+  border-color: rgba(45, 187, 127, 0.72);
+  box-shadow: 0 0 0 3px rgba(45, 187, 127, 0.2), var(--shadow);
+}
+
 .fade-slideshow {
   position: relative;
   width: 100%;
