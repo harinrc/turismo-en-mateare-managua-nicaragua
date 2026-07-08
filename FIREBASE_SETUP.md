@@ -98,6 +98,26 @@ service firebase.storage {
 - Si no aparecen datos en vivo: revisa Firestore rules y que exista la coleccion.
 - Si la app queda en modo local: revisa que todos los campos de [firebase-config.js](firebase-config.js) esten completos.
 
+## 8.1) Indexar imagenes en Google (Search Console)
+Este proyecto incluye un generador automatico de sitemap de imagenes:
+
+1. Ejecuta el generador antes de publicar cambios:
+```powershell
+node scripts/generate-image-sitemap.mjs
+```
+
+2. Verifica que exista [sitemap-images.xml](sitemap-images.xml) en la raiz del proyecto.
+
+3. Publica el sitio (push/deploy a GitHub Pages).
+
+4. En Google Search Console, envia estos dos sitemaps:
+  - https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap.xml
+  - https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap-images.xml
+
+Notas:
+- El generador toma imagenes estaticas desde [content.js](content.js) y publicaciones de Firestore (colecciones places/services) usando projectId/apiKey de [firebase-config.js](firebase-config.js).
+- Si agregas imagenes nuevas en Firebase y quieres que Google las vea rapido, vuelve a correr el generador y publica de nuevo.
+
 ## 9) Asignar rol administrador (Custom Claims)
 Usa este paso para dar acceso total solo a tu cuenta admin.
 

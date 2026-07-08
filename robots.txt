@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap.xml
+Sitemap: https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap-images.xml
