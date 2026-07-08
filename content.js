@@ -261,7 +261,13 @@ export const i18n = {
     "install.success": "Mateare Vivo se instaló correctamente.",
     "install.unavailable": "La instalación no está disponible en este navegador por ahora. Usa Chrome o Edge en Android para verla.",
     "install.notSupported": "Tu navegador ya muestra esta app como instalada o no admite instalación.",
-    "install.notNow": "Está bien, te lo volveré a mostrar más adelante."
+    "install.notNow": "Está bien, te lo volveré a mostrar más adelante.",
+    "gallery.title": "Vista previa",
+    "gallery.zoomIn": "Acercar",
+    "gallery.zoomOut": "Alejar",
+    "gallery.reset": "Reiniciar",
+    "gallery.close": "Cerrar",
+    "gallery.hint": "Consejo: puedes acercar y alejar para ver detalles."
   },
   en: {
     "nav.home": "Home",
@@ -440,6 +446,12 @@ export const i18n = {
     "install.success": "Mateare Vivo was installed successfully.",
     "install.unavailable": "Installation is not available in this browser right now. Use Chrome or Edge on Android to see it.",
     "install.notSupported": "Your browser already shows this app as installed or does not support installation.",
-    "install.notNow": "Okay, I’ll show it again later."
+    "install.notNow": "Okay, I’ll show it again later.",
+    "gallery.title": "Preview",
+    "gallery.zoomIn": "Zoom in",
+    "gallery.zoomOut": "Zoom out",
+    "gallery.reset": "Reset",
+    "gallery.close": "Close",
+    "gallery.hint": "Tip: you can zoom in and out to see details."
   }
 };

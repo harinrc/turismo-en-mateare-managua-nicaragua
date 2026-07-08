@@ -444,6 +444,25 @@
 
   <div id="toastRegion" class="toast" role="status" aria-live="polite"></div>
 
+  <div class="image-lightbox" id="imageLightbox" hidden aria-hidden="true">
+    <div class="image-lightbox-backdrop" id="imageLightboxBackdrop"></div>
+    <section class="image-lightbox-panel" role="dialog" aria-modal="true" aria-label="Vista previa de imagen">
+      <div class="image-lightbox-toolbar">
+        <strong data-i18n="gallery.title">Vista previa</strong>
+        <div class="image-lightbox-actions">
+          <button class="btn" id="lightboxZoomOut" type="button" data-i18n="gallery.zoomOut" aria-label="Alejar">-</button>
+          <button class="btn" id="lightboxZoomIn" type="button" data-i18n="gallery.zoomIn" aria-label="Acercar">+</button>
+          <button class="btn" id="lightboxZoomReset" type="button" data-i18n="gallery.reset" aria-label="Restablecer zoom">1x</button>
+          <button class="btn btn-primary" id="lightboxClose" type="button" data-i18n="gallery.close" aria-label="Cerrar">Cerrar</button>
+        </div>
+      </div>
+      <div class="image-lightbox-frame" id="imageLightboxFrame">
+        <img id="imageLightboxImg" class="image-lightbox-img" src="" alt="" loading="eager">
+      </div>
+      <p class="image-lightbox-hint" data-i18n="gallery.hint">Consejo: puedes acercar y alejar para ver detalles.</p>
+    </section>
+  </div>
+
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

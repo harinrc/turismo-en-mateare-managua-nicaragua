@@ -15,6 +15,7 @@ const ALERTS_EXTENDED_MAX_AGE_DAYS = 45;
 const ALERTS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
 const HERO_BG_CHANGE_INTERVAL_MS = 8 * 1000;
+const CARD_SLIDE_INTERVAL_SECONDS = 3;
 const ALERTS_PRIMARY_SEARCH_QUERIES = [
   "Mateare Managua",
   "Mateare",
@@ -73,6 +74,13 @@ const refs = {
   installBanner: document.getElementById("installBanner"),
   installBtn: document.getElementById("installBtn"),
   installDismissBtn: document.getElementById("installDismissBtn"),
+  imageLightbox: document.getElementById("imageLightbox"),
+  imageLightboxBackdrop: document.getElementById("imageLightboxBackdrop"),
+  imageLightboxImg: document.getElementById("imageLightboxImg"),
+  lightboxClose: document.getElementById("lightboxClose"),
+  lightboxZoomIn: document.getElementById("lightboxZoomIn"),
+  lightboxZoomOut: document.getElementById("lightboxZoomOut"),
+  lightboxZoomReset: document.getElementById("lightboxZoomReset"),
   toastRegion: document.getElementById("toastRegion"),
   navModeration: document.getElementById("navModeration"),
   moderationSection: document.getElementById("moderacion"),
@@ -117,6 +125,7 @@ let alertsSyncState = "idle";
 let heroBgTimer = null;
 let heroBgCurrentIndex = 0;
 let deferredInstallPrompt = null;
+let lightboxScale = 1;
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
 const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -307,14 +316,14 @@ function parseImageUrlsText(value) {
 function buildFadeSlideshow(images, altText, className = "") {
   const validImages = images.length ? images : [DEFAULT_PLACE_IMAGE];
   const count = validImages.length;
-  const totalDuration = Math.max(count * 4, 8);
+  const totalDuration = Math.max(count * CARD_SLIDE_INTERVAL_SECONDS, CARD_SLIDE_INTERVAL_SECONDS * 2);
   const boxClass = count > 1 ? "fade-slideshow" : "fade-slideshow single";
   const extraClass = className ? ` ${className}` : "";
 
   const slides = validImages
     .map(
       (url, index) =>
-        `<img class="fade-slide" src="${url}" alt="${altText}" loading="lazy" style="animation-delay:${index * 4}s;">`
+        `<img class="fade-slide" src="${url}" alt="${altText}" loading="lazy" style="animation-delay:${index * CARD_SLIDE_INTERVAL_SECONDS}s;">`
     )
     .join("");
 
@@ -1352,6 +1361,47 @@ function notify(message, type = "info") {
   }, 3200);
 }
 
+function setLightboxScale(nextScale) {
+  if (!refs.imageLightboxImg) return;
+
+  const clamped = Math.min(3.5, Math.max(1, nextScale));
+  lightboxScale = clamped;
+  refs.imageLightboxImg.style.transform = `scale(${lightboxScale})`;
+}
+
+function openImageLightbox(imageUrl, imageAlt) {
+  if (!refs.imageLightbox || !refs.imageLightboxImg || !imageUrl) return;
+
+  refs.imageLightboxImg.src = imageUrl;
+  refs.imageLightboxImg.alt = imageAlt || "";
+  setLightboxScale(1);
+  refs.imageLightbox.hidden = false;
+  refs.imageLightbox.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageLightbox() {
+  if (!refs.imageLightbox || !refs.imageLightboxImg) return;
+
+  refs.imageLightbox.hidden = true;
+  refs.imageLightbox.setAttribute("aria-hidden", "true");
+  refs.imageLightboxImg.src = "";
+  refs.imageLightboxImg.alt = "";
+  document.body.style.overflow = "";
+}
+
+function getMostVisibleSlide(slideshow) {
+  if (!(slideshow instanceof HTMLElement)) return null;
+  const slides = [...slideshow.querySelectorAll("img.fade-slide")];
+  if (!slides.length) return null;
+
+  return slides.reduce((best, current) => {
+    const currentOpacity = Number.parseFloat(getComputedStyle(current).opacity || "0") || 0;
+    const bestOpacity = best ? Number.parseFloat(getComputedStyle(best).opacity || "0") || 0 : -1;
+    return currentOpacity >= bestOpacity ? current : best;
+  }, null);
+}
+
 async function publishPlace(data) {
   if (state.useFirebase && !state.user) {
     notify(t("msg.signInRequired"), "error");
@@ -1710,6 +1760,38 @@ function setupInteractions() {
 
   refs.weatherPlace.addEventListener("change", renderWeather);
   refs.refreshWeather.addEventListener("click", renderWeather);
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const slideshow = target.closest(".fade-slideshow");
+    if (!(slideshow instanceof HTMLElement)) return;
+
+    const activeSlide = getMostVisibleSlide(slideshow);
+    if (!(activeSlide instanceof HTMLImageElement)) return;
+
+    openImageLightbox(activeSlide.src, activeSlide.alt);
+  });
+
+  refs.imageLightboxBackdrop?.addEventListener("click", closeImageLightbox);
+  refs.lightboxClose?.addEventListener("click", closeImageLightbox);
+  refs.lightboxZoomIn?.addEventListener("click", () => setLightboxScale(lightboxScale + 0.25));
+  refs.lightboxZoomOut?.addEventListener("click", () => setLightboxScale(lightboxScale - 0.25));
+  refs.lightboxZoomReset?.addEventListener("click", () => setLightboxScale(1));
+
+  refs.imageLightboxImg?.addEventListener("wheel", (event) => {
+    if (refs.imageLightbox?.hidden) return;
+    event.preventDefault();
+    const step = event.deltaY < 0 ? 0.15 : -0.15;
+    setLightboxScale(lightboxScale + step);
+  }, { passive: false });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && refs.imageLightbox && !refs.imageLightbox.hidden) {
+      closeImageLightbox();
+    }
+  });
 
   refs.menuBtn.addEventListener("click", () => {
     const isOpen = refs.mainNav.classList.toggle("is-open");

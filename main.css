@@ -487,11 +487,12 @@ form textarea {
 .fade-slideshow {
   position: relative;
   width: 100%;
-  height: 170px;
+  height: 220px;
   border-radius: 0.8rem;
   border: 1px solid rgba(18, 32, 46, 0.12);
   overflow: hidden;
   background: #e5e8eb;
+  cursor: zoom-in;
 }
 
 .fade-slide {
@@ -505,6 +506,13 @@ form textarea {
   animation-duration: var(--slide-duration, 8s);
   animation-iteration-count: infinite;
   animation-timing-function: ease-in-out;
+  transition: transform 280ms ease;
+}
+
+@media (hover: hover) {
+  .fade-slideshow:hover .fade-slide {
+    transform: scale(1.06);
+  }
 }
 
 .fade-slideshow.single .fade-slide {
@@ -692,10 +700,91 @@ form textarea {
 
 .feed-thumb {
   width: 100%;
-  height: 120px;
+  height: 170px;
   object-fit: cover;
   border-radius: 0.6rem;
   margin-top: 0.4rem;
+}
+
+.image-lightbox[hidden] {
+  display: none !important;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.image-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 20, 32, 0.74);
+  backdrop-filter: blur(3px);
+}
+
+.image-lightbox-panel {
+  position: relative;
+  width: min(980px, calc(100vw - 1rem));
+  max-height: calc(100vh - 1rem);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(170deg, rgba(12, 34, 50, 0.97), rgba(20, 53, 72, 0.97));
+  box-shadow: 0 24px 48px rgba(5, 11, 18, 0.42);
+  color: #eef6fb;
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+}
+
+.image-lightbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.image-lightbox-toolbar strong {
+  font-size: 1rem;
+}
+
+.image-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.image-lightbox-actions .btn {
+  padding: 0.48rem 0.72rem;
+  min-width: 2.4rem;
+}
+
+.image-lightbox-frame {
+  position: relative;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(7, 18, 28, 0.82);
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.image-lightbox-img {
+  display: block;
+  width: min(100%, 1300px);
+  height: auto;
+  margin: 0 auto;
+  transform-origin: center center;
+  transition: transform 180ms ease;
+}
+
+.image-lightbox-hint {
+  margin: 0;
+  color: rgba(238, 246, 251, 0.82);
+  font-size: 0.84rem;
 }
 
 .moderation-list {
