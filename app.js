@@ -1311,9 +1311,40 @@ function isStandaloneDisplayMode() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
+function isIOSDevice() {
+  const ua = window.navigator.userAgent || "";
+  const platform = window.navigator.platform || "";
+  const isIPhoneFamily = /iPad|iPhone|iPod/.test(ua);
+  const isIPadOSDesktopUA = platform === "MacIntel" && Number(window.navigator.maxTouchPoints || 0) > 1;
+  return isIPhoneFamily || isIPadOSDesktopUA;
+}
+
+function isAndroidDevice() {
+  const ua = window.navigator.userAgent || "";
+  return /Android/i.test(ua);
+}
+
+function isDesktopDevice() {
+  return !isIOSDevice() && !isAndroidDevice();
+}
+
+function getInstallMode() {
+  if (isStandaloneDisplayMode()) return "installed";
+  if (deferredInstallPrompt) return "prompt";
+  if (isIOSDevice()) return "ios-manual";
+  return "unsupported";
+}
+
 function showInstallBanner() {
   if (!refs.installBanner) return;
-  if (shouldSuppressInstallBanner() || !deferredInstallPrompt) {
+
+  if (shouldSuppressInstallBanner()) {
+    refs.installBanner.hidden = true;
+    return;
+  }
+
+  const mode = getInstallMode();
+  if (!["prompt", "ios-manual"].includes(mode)) {
     refs.installBanner.hidden = true;
     return;
   }
@@ -1327,8 +1358,22 @@ function hideInstallBanner() {
 }
 
 async function promptAppInstall() {
-  if (!deferredInstallPrompt) {
-    notify(t("install.unavailable"), "info");
+  const mode = getInstallMode();
+
+  if (mode === "installed") {
+    hideInstallBanner();
+    notify(t("install.notSupported"), "info");
+    return;
+  }
+
+  if (mode === "ios-manual") {
+    notify(t("install.iosInstructions"), "info");
+    return;
+  }
+
+  if (mode !== "prompt" || !deferredInstallPrompt) {
+    const unavailableKey = isDesktopDevice() ? "install.unavailableDesktop" : "install.unavailableMobile";
+    notify(t(unavailableKey), "info");
     return;
   }
 
@@ -2088,6 +2133,7 @@ function setupRevealOnScroll() {
 function boot() {
   initHeroBackgroundCarousel();
   applyTranslations();
+  showInstallBanner();
   renderAlerts();
   loadMunicipalAlerts({ force: true });
   if (!alertsRefreshTimer) {
