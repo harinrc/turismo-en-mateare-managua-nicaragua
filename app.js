@@ -317,19 +317,22 @@ async function resolveImages(data, options) {
   });
 
   const uploadedUrls = [];
+  let hadLocalFallback = false;
   for (const file of files) {
-    if (state.useFirebase && state.user) {
-      try {
+    try {
+      if (state.useFirebase && state.user) {
         const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
         uploadedUrls.push(uploadedUrl);
-      } catch (error) {
-        const wrapped = new Error("image-upload-failed");
-        wrapped.cause = error;
-        throw wrapped;
+      } else {
+        const localUrl = await readFileAsDataUrl(file);
+        uploadedUrls.push(localUrl);
       }
-    } else {
+    } catch (error) {
+      // Fallback keeps the published item from losing the image if Storage is temporarily unavailable.
       const localUrl = await readFileAsDataUrl(file);
       uploadedUrls.push(localUrl);
+      hadLocalFallback = true;
+      error._usedLocalFallback = true;
     }
   }
 
@@ -338,7 +341,10 @@ async function resolveImages(data, options) {
     allUrls.push(fallbackImage);
   }
 
-  return allUrls;
+  return {
+    imageUrls: allUrls,
+    hadLocalFallback
+  };
 }
 
 async function resolveServiceImages(data) {
@@ -367,6 +373,8 @@ async function resolveServiceImages(data) {
         uploadedUrls.push(localUrl);
       }
     } catch {
+      const localUrl = await readFileAsDataUrl(file);
+      uploadedUrls.push(localUrl);
       hadUploadErrors = true;
     }
   }
@@ -1323,14 +1331,17 @@ async function publishPlace(data) {
   }
 
   let imageUrls = [DEFAULT_PLACE_IMAGE];
+  let hadLocalFallback = false;
 
   try {
-    imageUrls = await resolveImages(data, {
+    const resolved = await resolveImages(data, {
       fileField: "imageFiles",
       urlField: "imageUrls",
       fallbackImage: DEFAULT_PLACE_IMAGE,
       uploadFolder: "places"
     });
+    imageUrls = resolved.imageUrls;
+    hadLocalFallback = resolved.hadLocalFallback;
   } catch (error) {
     const message = String(error?.message || "");
     notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.imageUploadError"), "error");
@@ -1375,6 +1386,10 @@ async function publishPlace(data) {
   setPlacePreview("");
   clearPlaceCoordinates(false);
   const placeMessage = payload.status === "pending" ? t("msg.placePending") : t("msg.placeSaved");
+  if (hadLocalFallback) {
+    notify(`${placeMessage} ${t("msg.imageUploadPartial")}`, "info");
+    return;
+  }
   notify(placeMessage, "success");
 }
 
@@ -1510,13 +1525,12 @@ async function saveAdminChanges(event) {
           uploadedUrls.push(localUrl);
         }
       } catch {
+        const localUrl = await readFileAsDataUrl(file);
+        uploadedUrls.push(localUrl);
+
         if (entity === "service") {
           hadServiceImageUploadErrors = true;
-          continue;
         }
-
-        const wrapped = new Error("image-upload-failed");
-        throw wrapped;
       }
     }
 
