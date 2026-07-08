@@ -78,6 +78,8 @@ const refs = {
   imageLightboxBackdrop: document.getElementById("imageLightboxBackdrop"),
   imageLightboxImg: document.getElementById("imageLightboxImg"),
   lightboxClose: document.getElementById("lightboxClose"),
+  lightboxPrev: document.getElementById("lightboxPrev"),
+  lightboxNext: document.getElementById("lightboxNext"),
   lightboxZoomIn: document.getElementById("lightboxZoomIn"),
   lightboxZoomOut: document.getElementById("lightboxZoomOut"),
   lightboxZoomReset: document.getElementById("lightboxZoomReset"),
@@ -126,6 +128,9 @@ let heroBgTimer = null;
 let heroBgCurrentIndex = 0;
 let deferredInstallPrompt = null;
 let lightboxScale = 1;
+let lightboxImages = [];
+let lightboxIndex = 0;
+let lightboxTouchStartX = 0;
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
 const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -1369,11 +1374,33 @@ function setLightboxScale(nextScale) {
   refs.imageLightboxImg.style.transform = `scale(${lightboxScale})`;
 }
 
-function openImageLightbox(imageUrl, imageAlt) {
-  if (!refs.imageLightbox || !refs.imageLightboxImg || !imageUrl) return;
+function renderLightboxImage(index) {
+  if (!refs.imageLightboxImg || !lightboxImages.length) return;
 
-  refs.imageLightboxImg.src = imageUrl;
-  refs.imageLightboxImg.alt = imageAlt || "";
+  const safeIndex = (index + lightboxImages.length) % lightboxImages.length;
+  lightboxIndex = safeIndex;
+  const current = lightboxImages[safeIndex];
+  refs.imageLightboxImg.src = current.src;
+  refs.imageLightboxImg.alt = current.alt || "";
+}
+
+function showPrevLightboxImage() {
+  if (!lightboxImages.length) return;
+  renderLightboxImage(lightboxIndex - 1);
+}
+
+function showNextLightboxImage() {
+  if (!lightboxImages.length) return;
+  renderLightboxImage(lightboxIndex + 1);
+}
+
+function openImageLightbox(images, startIndex = 0) {
+  if (!refs.imageLightbox || !refs.imageLightboxImg || !Array.isArray(images) || !images.length) return;
+
+  lightboxImages = images.filter((entry) => entry?.src);
+  if (!lightboxImages.length) return;
+
+  renderLightboxImage(startIndex);
   setLightboxScale(1);
   refs.imageLightbox.hidden = false;
   refs.imageLightbox.setAttribute("aria-hidden", "false");
@@ -1387,6 +1414,8 @@ function closeImageLightbox() {
   refs.imageLightbox.setAttribute("aria-hidden", "true");
   refs.imageLightboxImg.src = "";
   refs.imageLightboxImg.alt = "";
+  lightboxImages = [];
+  lightboxIndex = 0;
   document.body.style.overflow = "";
 }
 
@@ -1771,14 +1800,44 @@ function setupInteractions() {
     const activeSlide = getMostVisibleSlide(slideshow);
     if (!(activeSlide instanceof HTMLImageElement)) return;
 
-    openImageLightbox(activeSlide.src, activeSlide.alt);
+    const slides = [...slideshow.querySelectorAll("img.fade-slide")]
+      .filter((img) => img instanceof HTMLImageElement)
+      .map((img) => ({ src: img.src, alt: img.alt || "" }));
+
+    const activeIndex = Math.max(
+      0,
+      slides.findIndex((item) => item.src === activeSlide.src)
+    );
+
+    openImageLightbox(slides, activeIndex);
   });
 
   refs.imageLightboxBackdrop?.addEventListener("click", closeImageLightbox);
   refs.lightboxClose?.addEventListener("click", closeImageLightbox);
+  refs.lightboxPrev?.addEventListener("click", showPrevLightboxImage);
+  refs.lightboxNext?.addEventListener("click", showNextLightboxImage);
   refs.lightboxZoomIn?.addEventListener("click", () => setLightboxScale(lightboxScale + 0.25));
   refs.lightboxZoomOut?.addEventListener("click", () => setLightboxScale(lightboxScale - 0.25));
   refs.lightboxZoomReset?.addEventListener("click", () => setLightboxScale(1));
+
+  refs.imageLightboxImg?.addEventListener("touchstart", (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    lightboxTouchStartX = touch.clientX;
+  }, { passive: true });
+
+  refs.imageLightboxImg?.addEventListener("touchend", (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - lightboxTouchStartX;
+    if (Math.abs(deltaX) < 35) return;
+
+    if (deltaX < 0) {
+      showNextLightboxImage();
+    } else {
+      showPrevLightboxImage();
+    }
+  }, { passive: true });
 
   refs.imageLightboxImg?.addEventListener("wheel", (event) => {
     if (refs.imageLightbox?.hidden) return;
@@ -1788,8 +1847,20 @@ function setupInteractions() {
   }, { passive: false });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && refs.imageLightbox && !refs.imageLightbox.hidden) {
+    if (!refs.imageLightbox || refs.imageLightbox.hidden) return;
+
+    if (event.key === "Escape") {
       closeImageLightbox();
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      showPrevLightboxImage();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      showNextLightboxImage();
     }
   });
 
