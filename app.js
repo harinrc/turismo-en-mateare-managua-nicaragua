@@ -117,6 +117,31 @@ let alertsSyncState = "idle";
 let heroBgTimer = null;
 let heroBgCurrentIndex = 0;
 let deferredInstallPrompt = null;
+const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
+const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function getInstallBannerDismissedAt() {
+  const raw = localStorage.getItem(INSTALL_BANNER_DISMISS_KEY);
+  const timestamp = Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function setInstallBannerDismissedAt(timestampMs) {
+  localStorage.setItem(INSTALL_BANNER_DISMISS_KEY, String(timestampMs));
+}
+
+function clearInstallBannerDismissedAt() {
+  localStorage.removeItem(INSTALL_BANNER_DISMISS_KEY);
+}
+
+function shouldSuppressInstallBanner() {
+  if (isStandaloneDisplayMode()) return true;
+
+  const dismissedAt = getInstallBannerDismissedAt();
+  if (!dismissedAt) return false;
+
+  return Date.now() - dismissedAt < INSTALL_BANNER_DISMISS_TTL_MS;
+}
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -1231,7 +1256,7 @@ function isStandaloneDisplayMode() {
 
 function showInstallBanner() {
   if (!refs.installBanner) return;
-  if (isStandaloneDisplayMode() || !deferredInstallPrompt) {
+  if (shouldSuppressInstallBanner() || !deferredInstallPrompt) {
     refs.installBanner.hidden = true;
     return;
   }
@@ -1257,8 +1282,10 @@ async function promptAppInstall() {
   hideInstallBanner();
 
   if (choiceResult.outcome === "accepted") {
+    clearInstallBannerDismissedAt();
     notify(t("install.success"), "success");
   } else {
+    setInstallBannerDismissedAt(Date.now());
     notify(t("install.notNow"), "info");
   }
 }
@@ -1763,6 +1790,8 @@ function setupInteractions() {
 
   refs.installBtn?.addEventListener("click", promptAppInstall);
   refs.installDismissBtn?.addEventListener("click", () => {
+    setInstallBannerDismissedAt(Date.now());
+    deferredInstallPrompt = null;
     hideInstallBanner();
     notify(t("install.notNow"), "info");
   });
@@ -1906,6 +1935,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
 
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
+  clearInstallBannerDismissedAt();
   hideInstallBanner();
   notify(t("install.success"), "success");
 });
