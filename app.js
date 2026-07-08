@@ -70,6 +70,9 @@ const refs = {
   signInBtn: document.getElementById("signInBtn"),
   signOutBtn: document.getElementById("signOutBtn"),
   authNotice: document.getElementById("authNotice"),
+  installBanner: document.getElementById("installBanner"),
+  installBtn: document.getElementById("installBtn"),
+  installDismissBtn: document.getElementById("installDismissBtn"),
   toastRegion: document.getElementById("toastRegion"),
   navModeration: document.getElementById("navModeration"),
   moderationSection: document.getElementById("moderacion"),
@@ -113,6 +116,7 @@ let alertsLastSuccessAt = 0;
 let alertsSyncState = "idle";
 let heroBgTimer = null;
 let heroBgCurrentIndex = 0;
+let deferredInstallPrompt = null;
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
@@ -1213,6 +1217,44 @@ function updateAdminUI() {
   }
 }
 
+function isStandaloneDisplayMode() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function showInstallBanner() {
+  if (!refs.installBanner) return;
+  if (isStandaloneDisplayMode() || !deferredInstallPrompt) {
+    refs.installBanner.hidden = true;
+    return;
+  }
+
+  refs.installBanner.hidden = false;
+}
+
+function hideInstallBanner() {
+  if (!refs.installBanner) return;
+  refs.installBanner.hidden = true;
+}
+
+async function promptAppInstall() {
+  if (!deferredInstallPrompt) {
+    notify(t("install.unavailable"), "info");
+    return;
+  }
+
+  deferredInstallPrompt.prompt();
+  const choiceResult = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+
+  hideInstallBanner();
+
+  if (choiceResult.outcome === "accepted") {
+    notify(t("install.success"), "success");
+  } else {
+    notify(t("install.notNow"), "info");
+  }
+}
+
 async function syncAdminClaim(user) {
   if (!user || !state.useFirebase) {
     state.isAdmin = false;
@@ -1705,6 +1747,12 @@ function setupInteractions() {
     await firebaseClient.signOutUser();
   });
 
+  refs.installBtn?.addEventListener("click", promptAppInstall);
+  refs.installDismissBtn?.addEventListener("click", () => {
+    hideInstallBanner();
+    notify(t("install.notNow"), "info");
+  });
+
   [refs.pendingPlacesList, refs.pendingServicesList, refs.allPlacesList, refs.allServicesList].forEach((list) => {
     list?.addEventListener("click", async (event) => {
       const target = event.target;
@@ -1834,4 +1882,18 @@ function registerServiceWorker() {
 }
 
 registerServiceWorker();
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  showInstallBanner();
+  notify(t("install.ready"), "info");
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  hideInstallBanner();
+  notify(t("install.success"), "success");
+});
+
 boot();

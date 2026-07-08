@@ -252,7 +252,16 @@ export const i18n = {
     "msg.mapPickStart": "Selecciona el punto en el mapa para guardar la ubicación.",
     "msg.mapLocationSet": "Ubicación cargada desde el mapa.",
     "msg.mapLocationCleared": "Ubicación limpiada.",
-    "msg.locationRequired": "Debes seleccionar una ubicación en el mapa antes de publicar."
+    "msg.locationRequired": "Debes seleccionar una ubicación en el mapa antes de publicar.",
+    "install.title": "Instala Mateare Vivo",
+    "install.description": "Agrega la app a tu dispositivo para abrirla rápido y usarla con acceso más cómodo desde el móvil.",
+    "install.cta": "Instalar app",
+    "install.dismiss": "Ahora no",
+    "install.ready": "La app está lista para instalarse en tu dispositivo.",
+    "install.success": "Mateare Vivo se instaló correctamente.",
+    "install.unavailable": "La instalación no está disponible en este navegador por ahora. Usa Chrome o Edge en Android para verla.",
+    "install.notSupported": "Tu navegador ya muestra esta app como instalada o no admite instalación.",
+    "install.notNow": "Está bien, te lo volveré a mostrar más adelante."
   },
   en: {
     "nav.home": "Home",
@@ -422,6 +431,15 @@ export const i18n = {
     "msg.mapPickStart": "Select the point on the map to save the location.",
     "msg.mapLocationSet": "Location set from map.",
     "msg.mapLocationCleared": "Location cleared.",
-    "msg.locationRequired": "You must select a location on the map before publishing."
+    "msg.locationRequired": "You must select a location on the map before publishing.",
+    "install.title": "Install Mateare Vivo",
+    "install.description": "Add the app to your device so you can open it quickly and use it more comfortably on mobile.",
+    "install.cta": "Install app",
+    "install.dismiss": "Not now",
+    "install.ready": "The app is ready to be installed on your device.",
+    "install.success": "Mateare Vivo was installed successfully.",
+    "install.unavailable": "Installation is not available in this browser right now. Use Chrome or Edge on Android to see it.",
+    "install.notSupported": "Your browser already shows this app as installed or does not support installation.",
+    "install.notNow": "Okay, I’ll show it again later."
   }
 };

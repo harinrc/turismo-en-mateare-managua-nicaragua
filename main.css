@@ -101,6 +101,55 @@ a {
   box-shadow: var(--shadow);
 }
 
+.install-banner {
+  width: var(--container);
+  margin: 0.9rem auto 0;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(15, 42, 61, 0.96), rgba(22, 95, 55, 0.96));
+  color: #f9fdfb;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.install-banner-text {
+  min-width: 0;
+}
+
+.install-banner-text strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  margin-bottom: 0.18rem;
+}
+
+.install-banner-text p {
+  margin: 0;
+  color: rgba(249, 253, 251, 0.88);
+  line-height: 1.4;
+}
+
+.install-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.install-banner .btn-ghost {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.install-banner .btn {
+  white-space: nowrap;
+}
+
 .brand {
   font-size: clamp(1.2rem, 2vw, 1.7rem);
   color: #d7fbe8;
