@@ -37,14 +37,22 @@ export const initialServices = [
     name: "Comedor Doña Martha",
     type: "alimentacion",
     contact: "+505 8888 1234",
-    schedule: "7:00 AM - 7:00 PM"
+    schedule: "7:00 AM - 7:00 PM",
+    lat: 12.2435,
+    lng: -86.4310,
+    status: "approved",
+    imageUrls: []
   },
   {
     id: "s2",
     name: "Hostal Brisa de Xiloá",
     type: "hospedaje",
     contact: "+505 8787 6767",
-    schedule: "24 horas"
+    schedule: "24 horas",
+    lat: 12.2420,
+    lng: -86.4330,
+    status: "approved",
+    imageUrls: []
   }
 ];
 
