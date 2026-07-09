@@ -2034,6 +2034,10 @@ async function publishService(data) {
     return;
   }
 
+  // Obtener coordenadas del formulario
+  const serviceLat = refs.serviceLat?.value ? parseFloat(refs.serviceLat.value) : undefined;
+  const serviceLng = refs.serviceLng?.value ? parseFloat(refs.serviceLng.value) : undefined;
+
   const payload = {
     name: String(data.get("name")),
     type: String(data.get("type")),
@@ -2043,7 +2047,9 @@ async function publishService(data) {
     imageUrl: imageUrls[0] || "",
     status: state.useFirebase ? "pending" : "approved",
     createdByName: state.user?.displayName ?? "local",
-    createdByUid: state.user?.uid ?? "local"
+    createdByUid: state.user?.uid ?? "local",
+    lat: serviceLat,
+    lng: serviceLng
   };
 
   try {
