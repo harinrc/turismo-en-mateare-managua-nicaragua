@@ -41,6 +41,7 @@ const state = {
   selectedPlaceId: null,
   isPickingLocation: false,
   pickingLocationFor: null,  // "place" o "service"
+  pickingLocationForEditor: false,  // True cuando estamos editando desde admin panel
   user: null,
   isAdmin: false,
   useFirebase: firebaseClient.enabled
@@ -107,6 +108,8 @@ const refs = {
   editorCoordsRow: document.getElementById("editorCoordsRow"),
   editorLat: document.getElementById("editorLat"),
   editorLng: document.getElementById("editorLng"),
+  pickEditorLocationBtn: document.getElementById("pickEditorLocationBtn"),
+  clearEditorLocationBtn: document.getElementById("clearEditorLocationBtn"),
   editorServiceRow: document.getElementById("editorServiceRow"),
   editorContact: document.getElementById("editorContact"),
   editorSchedule: document.getElementById("editorSchedule"),
@@ -1058,7 +1061,10 @@ function initMap() {
     if (!state.isPickingLocation) return;
     const { lat, lng } = event.latlng;
     
-    if (state.pickingLocationFor === "service") {
+    if (state.pickingLocationForEditor) {
+      setEditorCoordinates(lat, lng, { showToast: true });
+      state.pickingLocationForEditor = false;
+    } else if (state.pickingLocationFor === "service") {
       setServiceCoordinates(lat, lng, { showToast: true });
     } else {
       setPlaceCoordinates(lat, lng, { showToast: true });
@@ -1136,6 +1142,48 @@ function clearPlaceCoordinates(showToast = true) {
 function clearServiceCoordinates(showToast = true) {
   if (refs.serviceLat) refs.serviceLat.value = "";
   if (refs.serviceLng) refs.serviceLng.value = "";
+  if (pickerMarker) {
+    pickerMarker.remove();
+    pickerMarker = null;
+  }
+  state.isPickingLocation = false;
+
+  if (showToast) {
+    notify(t("msg.mapLocationCleared"), "info");
+  }
+}
+
+function setEditorCoordinates(lat, lng, options = {}) {
+  const { showToast = true } = options;
+  
+  if (refs.editorLat) refs.editorLat.value = lat.toFixed(6);
+  if (refs.editorLng) refs.editorLng.value = lng.toFixed(6);
+
+  // Mostrar marcador en el mapa
+  const markerColor = "#1e8a5f";
+  const markerIcon = L.divIcon({
+    html: `<div style="background-color: ${markerColor}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">E</div>`,
+    className: "location-picker-icon",
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15]
+  });
+
+  if (pickerMarker) {
+    pickerMarker.remove();
+  }
+  pickerMarker = L.marker([lat, lng], { icon: markerIcon }).addTo(state.map);
+
+  state.isPickingLocation = false;
+
+  if (showToast) {
+    notify(t("msg.mapLocationSet"), "info");
+  }
+}
+
+function clearEditorCoordinates(showToast = true) {
+  if (refs.editorLat) refs.editorLat.value = "";
+  if (refs.editorLng) refs.editorLng.value = "";
   if (pickerMarker) {
     pickerMarker.remove();
     pickerMarker = null;
@@ -1582,6 +1630,12 @@ function closeAdminEditor() {
   if (!refs.adminEditorForm) return;
   refs.adminEditorForm.hidden = true;
   refs.adminEditorForm.reset();
+  state.isPickingLocation = false;
+  state.pickingLocationForEditor = false;
+  if (pickerMarker) {
+    pickerMarker.remove();
+    pickerMarker = null;
+  }
 }
 
 function renderModerationPanel() {
@@ -2590,6 +2644,17 @@ function setupInteractions() {
 
   refs.clearServiceLocationBtn?.addEventListener("click", () => {
     clearServiceCoordinates(true);
+  });
+
+  refs.pickEditorLocationBtn?.addEventListener("click", () => {
+    state.isPickingLocation = true;
+    state.pickingLocationForEditor = true;
+    notify(t("msg.mapPickStart"), "info");
+    document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  refs.clearEditorLocationBtn?.addEventListener("click", () => {
+    clearEditorCoordinates(true);
   });
 
   refs.placeForm.addEventListener("reset", () => {
