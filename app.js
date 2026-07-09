@@ -304,7 +304,7 @@ function getVisiblePlaces() {
   const currentUserUid = state.user?.uid;
   return state.places.filter((place) => {
     const status = place.status || "approved";
-    return status === "approved" || (status === "pending" && place.createdByUid && place.createdByUid === currentUserUid);
+    return status === "approved" || (status === "pending" && place.createdByUid === currentUserUid);
   });
 }
 
@@ -341,6 +341,10 @@ function setPlacePreview(src) {
     return;
   }
 
+  refs.placeImagePreview.onerror = () => {
+    refs.placeImagePreview.onerror = null;
+    refs.placeImagePreview.src = DEFAULT_PLACE_IMAGE;
+  };
   refs.placeImagePreview.src = src;
   refs.placeImagePreview.hidden = false;
 }
@@ -353,6 +357,23 @@ function parseImageUrlsText(value) {
     .filter(Boolean);
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildImageTag(url, altText, className = "", extraAttributes = "") {
+  const safeUrl = escapeHtml(url || DEFAULT_PLACE_IMAGE);
+  const safeAlt = escapeHtml(altText || "");
+  const safeClass = className ? ` class="${escapeHtml(className)}"` : "";
+  const safeExtra = extraAttributes ? ` ${extraAttributes}` : "";
+  return `<img${safeClass} src="${safeUrl}" alt="${safeAlt}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_PLACE_IMAGE}'"${safeExtra}>`;
+}
+
 function buildFadeSlideshow(images, altText, className = "") {
   const validImages = images.length ? images : [DEFAULT_PLACE_IMAGE];
   const count = validImages.length;
@@ -363,7 +384,7 @@ function buildFadeSlideshow(images, altText, className = "") {
   const slides = validImages
     .map(
       (url, index) =>
-        `<img class="fade-slide" src="${url}" alt="${altText}" loading="lazy" style="animation-delay:${index * CARD_SLIDE_INTERVAL_SECONDS}s;">`
+        buildImageTag(url, altText, "fade-slide", `style="animation-delay:${index * CARD_SLIDE_INTERVAL_SECONDS}s;"`)
     )
     .join("");
 
@@ -556,9 +577,7 @@ function buildModerationPlaceMarkup(place, options = {}) {
 
 function buildModerationServiceMarkup(service, options = {}) {
   const statusClass = options.statusClass || (service.status || "pending");
-  const gallery = service.imageUrls?.length
-    ? buildFadeSlideshow(service.imageUrls, service.name, "moderation-thumb")
-    : "";
+  const gallery = buildFadeSlideshow(service.imageUrls?.length ? service.imageUrls : [DEFAULT_PLACE_IMAGE], service.name, "moderation-thumb");
 
   return `
     ${gallery}
@@ -977,7 +996,7 @@ function redrawMarkers() {
     const marker = L.marker([place.lat, place.lng]).addTo(state.map);
     marker.placeId = place.id;
     marker.bindPopup(`
-      <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}">
+      ${buildImageTag(place.imageUrl || DEFAULT_PLACE_IMAGE, place.name, "place-image")}
       <strong>${place.name}</strong><br>${place.description}
       <div class="actions">
         <button class="btn btn-primary" type="button" data-map-route="${place.id}">${t("guide.route")}</button>
