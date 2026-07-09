@@ -971,7 +971,8 @@ function redrawMarkers() {
       <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}">
       <strong>${place.name}</strong><br>${place.description}
       <div class="actions">
-        <button class="btn btn-primary btn-map-card" type="button" data-map-card="${place.id}">${t("map.viewCard")}</button>
+        <button class="btn btn-primary" type="button" data-map-route="${place.id}">${t("guide.route")}</button>
+        <button class="btn btn-map-card" type="button" data-map-card="${place.id}">${t("map.viewCard")}</button>
       </div>
     `);
     marker.on("click", () => {
@@ -1993,6 +1994,15 @@ function setupInteractions() {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    const mapRouteButton = target.closest("button[data-map-route]");
+    if (mapRouteButton instanceof HTMLButtonElement) {
+      const placeId = mapRouteButton.getAttribute("data-map-route");
+      if (!placeId) return;
+
+      openRoute(placeId);
+      return;
+    }
 
     const mapCardButton = target.closest("button[data-map-card]");
     if (mapCardButton instanceof HTMLButtonElement) {
