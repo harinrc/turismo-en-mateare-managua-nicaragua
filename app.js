@@ -1300,6 +1300,9 @@ function goToPlaceLocation(placeId) {
   const place = getVisiblePlaces().find((p) => p.id === placeId);
   if (!place || !state.map) return;
   state.selectedPlaceId = placeId;
+  state.map.once("moveend", () => {
+    openPlaceMarkerPopup(placeId);
+  });
   state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
 }
 
@@ -1316,6 +1319,9 @@ function goToService(serviceId) {
 function goToServiceLocation(serviceId) {
   const service = state.services.find((s) => s.id === serviceId);
   if (!service || !state.map) return;
+  state.map.once("moveend", () => {
+    openServiceMarkerPopup(serviceId);
+  });
   state.map.flyTo([service.lat, service.lng], 14, { duration: 1.2 });
 }
 
