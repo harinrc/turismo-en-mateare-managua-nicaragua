@@ -407,7 +407,13 @@ function buildImageTag(url, altText, className = "", extraAttributes = "") {
 }
 
 function buildFadeSlideshow(images, altText, className = "") {
-  const validImages = images.length ? images : [DEFAULT_PLACE_IMAGE];
+  // Filtrar imágenes vacías, nulas o inválidas
+  const imgArray = Array.isArray(images) ? images : [];
+  const filtered = imgArray.filter(
+    (url) => url && typeof url === "string" && url.trim().length > 0
+  );
+  const validImages = filtered.length > 0 ? filtered : [DEFAULT_PLACE_IMAGE];
+  
   const count = validImages.length;
   const totalDuration = Math.max(count * CARD_SLIDE_INTERVAL_SECONDS, CARD_SLIDE_INTERVAL_SECONDS * 2);
   const boxClass = count > 1 ? "fade-slideshow" : "fade-slideshow single";
@@ -472,13 +478,20 @@ async function resolveImages(data, options) {
   }
 
   const allUrls = [...uploadedUrls, ...validUrls];
-  // Solo usar fallback si el usuario NO intentó subir archivos locales
-  if (!allUrls.length && fallbackImage && files.length === 0) {
-    allUrls.push(fallbackImage);
+  // Filtrar URLs vacías o inválidas
+  const cleanUrls = allUrls.filter((url) => {
+    if (!url || typeof url !== "string") return false;
+    if (!isValidImageUrl(url)) return false;
+    return true;
+  });
+  
+  // Si no hay URLs válidas y no intentó subir archivos, usar fallback
+  if (!cleanUrls.length && fallbackImage && files.length === 0) {
+    cleanUrls.push(fallbackImage);
   }
 
   return {
-    imageUrls: allUrls,
+    imageUrls: cleanUrls,
     hadLocalFallback: false,
     failedFiles: failedFiles,
     uploadedCount: uploadedUrls.length,
@@ -527,8 +540,16 @@ async function resolveServiceImages(data) {
     throw new Error(`all-images-failed:${failedFiles.map(f => f.name).join(", ")}`);
   }
 
+  const allUrls = [...uploadedUrls, ...validUrls];
+  // Filtrar URLs vacías o inválidas
+  const cleanUrls = allUrls.filter((url) => {
+    if (!url || typeof url !== "string") return false;
+    if (!isValidImageUrl(url)) return false;
+    return true;
+  });
+
   return {
-    imageUrls: [...uploadedUrls, ...validUrls],
+    imageUrls: cleanUrls,
     hadUploadErrors: failedFiles.length > 0,
     failedFiles: failedFiles,
     uploadedCount: uploadedUrls.length,
