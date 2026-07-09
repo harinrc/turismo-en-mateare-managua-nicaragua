@@ -305,6 +305,10 @@ function normalizeService(service) {
     imageUrls.push(service.imageUrl);
   }
 
+  // Proporcionar ubicaciones por defecto si no existen
+  const lat = Number.isFinite(service.lat) ? service.lat : 12.2424;
+  const lng = Number.isFinite(service.lng) ? service.lng : -86.4318;
+
   return {
     id: service.id,
     name: service.name,
@@ -315,7 +319,9 @@ function normalizeService(service) {
     imageUrl: imageUrls[0] || "",
     status: service.status || "approved",
     createdByName: service.createdByName || "Comunidad",
-    createdByUid: service.createdByUid || null
+    createdByUid: service.createdByUid || null,
+    lat,
+    lng
   };
 }
 
