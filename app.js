@@ -779,6 +779,7 @@ function renderCommunityFeed() {
         } else {
           mapButtons = `
             <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
+              <button class="btn btn-primary" type="button" data-map-route-service="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
               <button class="btn btn-accent" type="button" data-map-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewCard")}</button>
             </div>
           `;
@@ -1171,9 +1172,11 @@ function redrawMarkers() {
     state.markers.push(marker);
   });
 
-  // Dibujar marcadores de SERVICIOS
+  // Dibujar marcadores de SERVICIOS (solo aprobados)
   state.services.forEach((service) => {
     if (!Number.isFinite(service.lat) || !Number.isFinite(service.lng)) return;
+    // Solo mostrar servicios aprobados en el mapa
+    if (service.status !== "approved") return;
     
     // Crear marcador con color naranja para servicios
     const serviceIcon = L.divIcon({
@@ -1192,8 +1195,9 @@ function redrawMarkers() {
       <small>${t("publish.serviceType")}: ${t(`publish.${service.type}`)}</small><br>
       <small>${t("publish.contact")}: ${service.contact}</small><br>
       <small>${t("publish.schedule")}: ${service.schedule}</small>
-      <div class="actions">
-        <button class="btn btn-accent" type="button" data-map-service="${service.id}">${t("map.viewCard")}</button>
+      <div class="actions" style="gap: 0.5rem; margin-top: 0.5rem;">
+        <button class="btn btn-primary" type="button" data-map-route-service="${service.id}" style="font-size: 0.85rem;">${t("guide.route")}</button>
+        <button class="btn btn-accent" type="button" data-map-service="${service.id}" style="font-size: 0.85rem;">${t("map.viewCard")}</button>
       </div>
     `);
     state.markers.push(marker);
@@ -1302,6 +1306,14 @@ function openRoute(placeId) {
   if (!place) return;
 
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+  window.open(mapsUrl, "_blank", "noopener,noreferrer");
+}
+
+function openServiceRoute(serviceId) {
+  const service = getVisibleServices().find((s) => s.id === serviceId);
+  if (!service) return;
+
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${service.lat},${service.lng}`;
   window.open(mapsUrl, "_blank", "noopener,noreferrer");
 }
 
@@ -2334,6 +2346,15 @@ function setupInteractions() {
       if (!placeId) return;
 
       openRoute(placeId);
+      return;
+    }
+
+    const mapServiceRouteButton = target.closest("button[data-map-route-service]");
+    if (mapServiceRouteButton instanceof HTMLButtonElement) {
+      const serviceId = mapServiceRouteButton.getAttribute("data-map-route-service");
+      if (!serviceId) return;
+
+      openServiceRoute(serviceId);
       return;
     }
 
