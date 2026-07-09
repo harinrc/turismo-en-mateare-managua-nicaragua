@@ -466,8 +466,14 @@ async function resolveImages(data, options) {
     }
   }
 
+  // Si el usuario intentó subir archivos pero TODOS fallaron, reportar error
+  if (files.length > 0 && uploadedUrls.length === 0) {
+    throw new Error(`all-images-failed:${failedFiles.map(f => f.name).join(", ")}`);
+  }
+
   const allUrls = [...uploadedUrls, ...validUrls];
-  if (!allUrls.length && fallbackImage) {
+  // Solo usar fallback si el usuario NO intentó subir archivos locales
+  if (!allUrls.length && fallbackImage && files.length === 0) {
     allUrls.push(fallbackImage);
   }
 
@@ -514,6 +520,11 @@ async function resolveServiceImages(data) {
       });
       console.error(`Failed to upload ${file.name}:`, error);
     }
+  }
+
+  // Si el usuario intentó subir archivos pero TODOS fallaron, reportar error
+  if (files.length > 0 && uploadedUrls.length === 0) {
+    throw new Error(`all-images-failed:${failedFiles.map(f => f.name).join(", ")}`);
   }
 
   return {
@@ -1752,7 +1763,11 @@ async function publishPlace(data) {
     failedFiles = resolved.failedFiles || [];
   } catch (error) {
     const message = String(error?.message || "");
-    if (message.includes("firebase-required-for-images")) {
+    if (message.includes("all-images-failed")) {
+      const match = message.match(/all-images-failed:(.+)/);
+      const failedNames = match ? match[1] : "las imágenes";
+      notify(`No se pudieron subir las imágenes: ${failedNames}`, "error");
+    } else if (message.includes("firebase-required-for-images")) {
       notify(t("msg.firebaseSignInRequired"), "error");
     } else if (message.includes("invalid-image-url")) {
       notify(t("msg.invalidImage"), "error");
@@ -1825,7 +1840,11 @@ async function publishService(data) {
     failedFiles = resolved.failedFiles || [];
   } catch (error) {
     const message = String(error?.message || "");
-    if (message.includes("firebase-required-for-images")) {
+    if (message.includes("all-images-failed")) {
+      const match = message.match(/all-images-failed:(.+)/);
+      const failedNames = match ? match[1] : "las imágenes";
+      notify(`No se pudieron subir las imágenes: ${failedNames}`, "error");
+    } else if (message.includes("firebase-required-for-images")) {
       notify(t("msg.firebaseSignInRequired"), "error");
     } else if (message.includes("invalid-image-url")) {
       notify(t("msg.invalidImage"), "error");
