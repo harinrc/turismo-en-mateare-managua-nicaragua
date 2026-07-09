@@ -40,6 +40,7 @@ const state = {
   markers: [],
   selectedPlaceId: null,
   isPickingLocation: false,
+  pickingLocationFor: null,  // "place" o "service"
   user: null,
   isAdmin: false,
   useFirebase: firebaseClient.enabled
@@ -116,7 +117,11 @@ const refs = {
   placeLat: document.getElementById("placeLat"),
   placeLng: document.getElementById("placeLng"),
   pickLocationBtn: document.getElementById("pickLocationBtn"),
-  clearLocationBtn: document.getElementById("clearLocationBtn")
+  clearLocationBtn: document.getElementById("clearLocationBtn"),
+  serviceLat: document.getElementById("serviceLat"),
+  serviceLng: document.getElementById("serviceLng"),
+  pickServiceLocationBtn: document.getElementById("pickServiceLocationBtn"),
+  clearServiceLocationBtn: document.getElementById("clearServiceLocationBtn")
 };
 
 let toastTimer = null;
@@ -1013,14 +1018,19 @@ function initMap() {
   state.map.on("click", (event) => {
     if (!state.isPickingLocation) return;
     const { lat, lng } = event.latlng;
-    setPlaceCoordinates(lat, lng, { showToast: true });
+    
+    if (state.pickingLocationFor === "service") {
+      setServiceCoordinates(lat, lng, { showToast: true });
+    } else {
+      setPlaceCoordinates(lat, lng, { showToast: true });
+    }
     state.isPickingLocation = false;
   });
 
   redrawMarkers();
 }
 
-function setPlaceCoordinates(lat, lng, options = {}) {
+function setCoordinates(lat, lng, formType, options = {}) {
   const showToast = options.showToast ?? false;
   const flyTo = options.flyTo ?? false;
 
@@ -1028,8 +1038,11 @@ function setPlaceCoordinates(lat, lng, options = {}) {
   const safeLng = Number(lng);
   if (!Number.isFinite(safeLat) || !Number.isFinite(safeLng)) return;
 
-  if (refs.placeLat) refs.placeLat.value = safeLat.toFixed(6);
-  if (refs.placeLng) refs.placeLng.value = safeLng.toFixed(6);
+  const latRef = formType === "service" ? refs.serviceLat : refs.placeLat;
+  const lngRef = formType === "service" ? refs.serviceLng : refs.placeLng;
+
+  if (latRef) latRef.value = safeLat.toFixed(6);
+  if (lngRef) lngRef.value = safeLng.toFixed(6);
 
   if (state.map) {
     if (pickerMarker) {
@@ -1049,9 +1062,31 @@ function setPlaceCoordinates(lat, lng, options = {}) {
   }
 }
 
+function setPlaceCoordinates(lat, lng, options = {}) {
+  setCoordinates(lat, lng, "place", options);
+}
+
+function setServiceCoordinates(lat, lng, options = {}) {
+  setCoordinates(lat, lng, "service", options);
+}
+
 function clearPlaceCoordinates(showToast = true) {
   if (refs.placeLat) refs.placeLat.value = "";
   if (refs.placeLng) refs.placeLng.value = "";
+  if (pickerMarker) {
+    pickerMarker.remove();
+    pickerMarker = null;
+  }
+  state.isPickingLocation = false;
+
+  if (showToast) {
+    notify(t("msg.mapLocationCleared"), "info");
+  }
+}
+
+function clearServiceCoordinates(showToast = true) {
+  if (refs.serviceLat) refs.serviceLat.value = "";
+  if (refs.serviceLng) refs.serviceLng.value = "";
   if (pickerMarker) {
     pickerMarker.remove();
     pickerMarker = null;
@@ -1069,9 +1104,11 @@ function redrawMarkers() {
   state.markers.forEach((marker) => marker.remove());
   state.markers = [];
 
+  // Dibujar marcadores de LUGARES
   getVisiblePlaces().forEach((place) => {
     const marker = L.marker([place.lat, place.lng]).addTo(state.map);
     marker.placeId = place.id;
+    marker.isPlace = true;
     marker.bindPopup(`
       ${buildImageTag(place.imageUrl || DEFAULT_PLACE_IMAGE, place.name, "place-image")}
       <strong>${place.name}</strong><br>${place.description}
@@ -1083,6 +1120,34 @@ function redrawMarkers() {
     marker.on("click", () => {
       state.selectedPlaceId = place.id;
     });
+    state.markers.push(marker);
+  });
+
+  // Dibujar marcadores de SERVICIOS
+  state.services.forEach((service) => {
+    if (!Number.isFinite(service.lat) || !Number.isFinite(service.lng)) return;
+    
+    // Crear marcador con color naranja para servicios
+    const serviceIcon = L.divIcon({
+      html: `<div style="background-color: #ff9f1c; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">S</div>`,
+      className: "service-marker",
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -15]
+    });
+
+    const marker = L.marker([service.lat, service.lng], { icon: serviceIcon }).addTo(state.map);
+    marker.serviceId = service.id;
+    marker.isService = true;
+    marker.bindPopup(`
+      <strong>${service.name}</strong><br>
+      <small>${t("publish.serviceType")}: ${t(`publish.${service.type}`)}</small><br>
+      <small>${t("publish.contact")}: ${service.contact}</small><br>
+      <small>${t("publish.schedule")}: ${service.schedule}</small>
+      <div class="actions">
+        <button class="btn btn-accent" type="button" data-map-service="${service.id}">${t("map.viewCard")}</button>
+      </div>
+    `);
     state.markers.push(marker);
   });
 }
@@ -1138,6 +1203,21 @@ function goToPlace(placeId) {
     openPlaceMarkerPopup(placeId);
   });
   state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
+}
+
+function goToService(serviceId) {
+  const service = state.services.find((s) => s.id === serviceId);
+  if (!service || !state.map) return;
+  state.map.once("moveend", () => {
+    openServiceMarkerPopup(serviceId);
+  });
+  state.map.flyTo([service.lat, service.lng], 14, { duration: 1.2 });
+}
+
+function openServiceMarkerPopup(serviceId) {
+  const marker = state.markers.find((item) => item?.serviceId === serviceId);
+  if (!marker) return;
+  marker.openPopup();
 }
 
 function openRoute(placeId) {
@@ -2181,6 +2261,16 @@ function setupInteractions() {
       return;
     }
 
+    const mapServiceButton = target.closest("button[data-map-service]");
+    if (mapServiceButton instanceof HTMLButtonElement) {
+      const serviceId = mapServiceButton.getAttribute("data-map-service");
+      if (!serviceId) return;
+
+      goToService(serviceId);
+      state.map?.closePopup();
+      return;
+    }
+
     const slideshow = target.closest(".fade-slideshow");
     if (!(slideshow instanceof HTMLElement)) return;
 
@@ -2319,6 +2409,7 @@ function setupInteractions() {
 
   refs.pickLocationBtn?.addEventListener("click", () => {
     state.isPickingLocation = true;
+    state.pickingLocationFor = "place";
     notify(t("msg.mapPickStart"), "info");
     document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
   });
@@ -2327,10 +2418,27 @@ function setupInteractions() {
     clearPlaceCoordinates(true);
   });
 
+  refs.pickServiceLocationBtn?.addEventListener("click", () => {
+    state.isPickingLocation = true;
+    state.pickingLocationFor = "service";
+    notify(t("msg.mapPickStart"), "info");
+    document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  refs.clearServiceLocationBtn?.addEventListener("click", () => {
+    clearServiceCoordinates(true);
+  });
+
   refs.placeForm.addEventListener("reset", () => {
     setTimeout(() => {
       clearPlaceCoordinates(false);
       setPlacePreview("");
+    }, 0);
+  });
+
+  refs.serviceForm.addEventListener("reset", () => {
+    setTimeout(() => {
+      clearServiceCoordinates(false);
     }, 0);
   });
 

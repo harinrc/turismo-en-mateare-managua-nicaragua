@@ -286,6 +286,21 @@
             <span data-i18n="publish.serviceImageFiles">Subir imágenes (opcional)</span>
             <input id="serviceImageFile" name="imageFiles" type="file" accept="image/*" multiple>
           </label>
+          <div class="location-picker-row">
+            <button class="btn btn-accent" id="pickServiceLocationBtn" type="button" data-i18n="publish.pickOnMap">Seleccionar en mapa</button>
+            <button class="btn btn-accent" id="clearServiceLocationBtn" type="button" data-i18n="publish.clearLocation">Limpiar ubicación</button>
+          </div>
+          <p class="location-hint" data-i18n="publish.locationHint">Haz clic en "Seleccionar en mapa" y luego toca el punto exacto en el mapa.</p>
+          <div class="row-2">
+            <label>
+              <span>Lat</span>
+              <input id="serviceLat" name="lat" type="number" step="any" readonly>
+            </label>
+            <label>
+              <span>Lng</span>
+              <input id="serviceLng" name="lng" type="number" step="any" readonly>
+            </label>
+          </div>
           <button class="btn btn-primary" type="submit" data-i18n="publish.publishService">Publicar servicio</button>
         </form>
       </div>

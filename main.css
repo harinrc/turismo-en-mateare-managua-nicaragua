@@ -394,6 +394,12 @@ a {
   box-shadow: 0 12px 22px rgba(45, 187, 127, 0.28);
 }
 
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent-2), #ff7f1c);
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(255, 159, 28, 0.28);
+}
+
 .btn-ghost {
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.64);
