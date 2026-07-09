@@ -780,7 +780,7 @@ function renderCommunityFeed() {
           mapButtons = `
             <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
               <button class="btn btn-primary" type="button" data-map-route-service="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
-              <button class="btn btn-accent" type="button" data-map-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewCard")}</button>
+              <button class="btn btn-accent" type="button" data-map-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
             </div>
           `;
         }

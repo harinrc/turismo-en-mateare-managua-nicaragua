@@ -209,6 +209,7 @@ export const i18n = {
     "publish.feedTitle": "Publicaciones comunitarias",
     "map.tag": "Ubicación y rutas",
     "map.title": "Mapa interactivo de destinos",
+    "map.viewOnMap": "Ver en mapa",
     "map.viewCard": "Ver tarjeta",
     "admin.tag": "Panel administrativo",
     "admin.title": "Moderar publicaciones pendientes",
