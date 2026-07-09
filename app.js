@@ -518,6 +518,50 @@ function formatCategory(category) {
   return map[category] ?? category;
 }
 
+function formatServiceType(type) {
+  const map = {
+    alimentacion: t("publish.food"),
+    hospedaje: t("publish.lodging"),
+    actividad: t("publish.activities")
+  };
+  return map[type] ?? type;
+}
+
+function buildModerationPlaceMarkup(place, options = {}) {
+  const statusClass = options.statusClass || (place.status || "pending");
+  const gallery = buildFadeSlideshow(place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE], place.name, "moderation-thumb");
+  const description = place.description || "-";
+  const latText = Number.isFinite(place.lat) ? Number(place.lat).toFixed(6) : "-";
+  const lngText = Number.isFinite(place.lng) ? Number(place.lng).toFixed(6) : "-";
+
+  return `
+    ${gallery}
+    <h4>${place.name}</h4>
+    <p><span class="status-pill ${statusClass}">${getStatusLabel(place.status)}</span></p>
+    <p class="moderation-description">${description}</p>
+    <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
+    <p class="moderation-meta">Lat: ${latText} · Lng: ${lngText}</p>
+    <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
+  `;
+}
+
+function buildModerationServiceMarkup(service, options = {}) {
+  const statusClass = options.statusClass || (service.status || "pending");
+  const gallery = service.imageUrls?.length
+    ? buildFadeSlideshow(service.imageUrls, service.name, "moderation-thumb")
+    : "";
+
+  return `
+    ${gallery}
+    <h4>${service.name}</h4>
+    <p><span class="status-pill ${statusClass}">${getStatusLabel(service.status)}</span></p>
+    <p class="moderation-meta">${t("publish.serviceType")}: ${formatServiceType(service.type)}</p>
+    <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
+    <p class="moderation-meta">${t("publish.schedule")}: ${service.schedule || "-"}</p>
+    <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
+  `;
+}
+
 function renderGuides() {
   const visiblePlaces = getVisiblePlaces();
   const text = refs.searchGuide.value.trim().toLowerCase();
@@ -1238,10 +1282,7 @@ function renderModerationPanel() {
     const item = document.createElement("article");
     item.className = "moderation-item";
     item.innerHTML = `
-      <h4>${place.name}</h4>
-      <p><span class="status-pill pending">${getStatusLabel(place.status)}</span></p>
-      <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
-      <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
+      ${buildModerationPlaceMarkup(place, { statusClass: "pending" })}
       <div class="moderation-actions">
         <button class="btn btn-primary" data-entity="place" data-id="${place.id}" data-action="approve">${t("admin.approve")}</button>
         <button class="btn btn-warning" data-entity="place" data-id="${place.id}" data-action="reject">${t("admin.reject")}</button>
@@ -1255,11 +1296,7 @@ function renderModerationPanel() {
     const item = document.createElement("article");
     item.className = "moderation-item";
     item.innerHTML = `
-      <h4>${service.name}</h4>
-      <p><span class="status-pill pending">${getStatusLabel(service.status)}</span></p>
-      <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
-      <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
-      <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
+      ${buildModerationServiceMarkup(service, { statusClass: "pending" })}
       <div class="moderation-actions">
         <button class="btn btn-primary" data-entity="service" data-id="${service.id}" data-action="approve">${t("admin.approve")}</button>
         <button class="btn btn-warning" data-entity="service" data-id="${service.id}" data-action="reject">${t("admin.reject")}</button>
@@ -1281,10 +1318,7 @@ function renderModerationPanel() {
     const item = document.createElement("article");
     item.className = "moderation-item";
     item.innerHTML = `
-      <h4>${place.name}</h4>
-      <p><span class="status-pill ${place.status || "pending"}">${getStatusLabel(place.status)}</span></p>
-      <p class="moderation-meta">${t("guide.category")}: ${formatCategory(place.category)}</p>
-      <p class="moderation-meta">${t("admin.createdBy")}: ${place.createdByName || "Comunidad"}</p>
+      ${buildModerationPlaceMarkup(place)}
       <div class="moderation-actions">
         <button class="btn" data-entity="place" data-id="${place.id}" data-action="edit">${t("admin.edit")}</button>
         <button class="btn btn-danger" data-entity="place" data-id="${place.id}" data-action="delete">${t("admin.delete")}</button>
@@ -1297,10 +1331,7 @@ function renderModerationPanel() {
     const item = document.createElement("article");
     item.className = "moderation-item";
     item.innerHTML = `
-      <h4>${service.name}</h4>
-      <p><span class="status-pill ${service.status || "pending"}">${getStatusLabel(service.status)}</span></p>
-      <p class="moderation-meta">${t("publish.serviceType")}: ${service.type}</p>
-      <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
+      ${buildModerationServiceMarkup(service)}
       <div class="moderation-actions">
         <button class="btn" data-entity="service" data-id="${service.id}" data-action="edit">${t("admin.edit")}</button>
         <button class="btn btn-danger" data-entity="service" data-id="${service.id}" data-action="delete">${t("admin.delete")}</button>

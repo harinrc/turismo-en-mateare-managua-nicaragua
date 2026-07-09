@@ -808,9 +808,20 @@ form textarea {
   padding: 0.75rem;
 }
 
+.moderation-item .fade-slideshow {
+  height: 190px;
+  margin-bottom: 0.65rem;
+}
+
 .moderation-item h4 {
   margin: 0;
   font-size: 1rem;
+}
+
+.moderation-description {
+  margin: 0.4rem 0 0;
+  color: var(--text);
+  line-height: 1.45;
 }
 
 .admin-editor {
