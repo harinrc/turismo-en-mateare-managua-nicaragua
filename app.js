@@ -72,6 +72,8 @@ const refs = {
   signOutBtn: document.getElementById("signOutBtn"),
   authNotice: document.getElementById("authNotice"),
   installBanner: document.getElementById("installBanner"),
+  installBannerTitle: document.getElementById("installBannerTitle"),
+  installBannerDescription: document.getElementById("installBannerDescription"),
   installBtn: document.getElementById("installBtn"),
   installDismissBtn: document.getElementById("installDismissBtn"),
   imageLightbox: document.getElementById("imageLightbox"),
@@ -132,6 +134,7 @@ let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchStartX = 0;
 let placeCardFocusTimer = null;
+const moderationActionLocks = new Set();
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
 const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -160,6 +163,28 @@ function shouldSuppressInstallBanner() {
 
 function t(key) {
   return i18n[state.lang][key] ?? i18n.es[key] ?? key;
+}
+
+function renderInstallBannerContent() {
+  const mode = getInstallMode();
+
+  if (refs.installBannerTitle) {
+    refs.installBannerTitle.textContent = t("install.title");
+  }
+
+  if (refs.installBannerDescription) {
+    const descriptionKey = mode === "unsupported" ? "install.descriptionUnsupported" : "install.description";
+    refs.installBannerDescription.textContent = t(descriptionKey);
+  }
+
+  if (refs.installBtn) {
+    const buttonKey = mode === "prompt" ? "install.cta" : "install.ctaHelp";
+    refs.installBtn.textContent = t(buttonKey);
+  }
+
+  if (refs.installDismissBtn) {
+    refs.installDismissBtn.textContent = t("install.dismiss");
+  }
 }
 
 function loadFromStorage(key, fallback) {
@@ -439,6 +464,7 @@ function applyTranslations() {
 
   updateAuthUI();
   renderAlertsSyncStatus();
+  renderInstallBannerContent();
 }
 
 function formatSyncDateTime(timestampMs) {
@@ -1337,6 +1363,7 @@ function getInstallMode() {
 
 function showInstallBanner() {
   if (!refs.installBanner) return;
+  renderInstallBannerContent();
 
   if (shouldSuppressInstallBanner()) {
     refs.installBanner.hidden = true;
@@ -1344,7 +1371,7 @@ function showInstallBanner() {
   }
 
   const mode = getInstallMode();
-  if (!["prompt", "ios-manual"].includes(mode)) {
+  if (mode === "installed") {
     refs.installBanner.hidden = true;
     return;
   }
@@ -1649,10 +1676,17 @@ async function applyModeration(entity, itemId, action) {
     return;
   }
 
+  const actionKey = `${entity}:${itemId}`;
+  if (moderationActionLocks.has(actionKey)) {
+    return;
+  }
+
   if (action === "edit") {
     openAdminEditor(entity, itemId);
     return;
   }
+
+  moderationActionLocks.add(actionKey);
 
   try {
     if (entity === "place") {
@@ -1679,6 +1713,8 @@ async function applyModeration(entity, itemId, action) {
   } catch (error) {
     console.error("Moderation error:", error);
     notify(t("msg.moderationError"), "error");
+  } finally {
+    moderationActionLocks.delete(actionKey);
   }
 }
 
@@ -2041,7 +2077,6 @@ function setupInteractions() {
   refs.installBtn?.addEventListener("click", promptAppInstall);
   refs.installDismissBtn?.addEventListener("click", () => {
     setInstallBannerDismissedAt(Date.now());
-    deferredInstallPrompt = null;
     hideInstallBanner();
     notify(t("install.notNow"), "info");
   });
@@ -2059,7 +2094,9 @@ function setupInteractions() {
       const itemId = button.dataset.id;
 
       if (!action || !entity || !itemId) return;
+      button.disabled = true;
       await applyModeration(entity, itemId, action);
+      button.disabled = false;
     });
   });
 
