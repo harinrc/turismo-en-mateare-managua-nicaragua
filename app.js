@@ -1209,6 +1209,14 @@ function openPlaceMarkerPopup(placeId) {
   const marker = state.markers.find((item) => item?.placeId === placeId);
   if (!marker) return;
   marker.openPopup();
+  
+  // Asegurar que el popup se vea centrado en la pantalla
+  setTimeout(() => {
+    const popup = document.querySelector(".leaflet-popup");
+    if (popup) {
+      popup.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 100);
 }
 
 function focusPlaceCard(placeId) {
@@ -1300,6 +1308,14 @@ function openServiceMarkerPopup(serviceId) {
   const marker = state.markers.find((item) => item?.serviceId === serviceId);
   if (!marker) return;
   marker.openPopup();
+  
+  // Asegurar que el popup se vea centrado en la pantalla
+  setTimeout(() => {
+    const popup = document.querySelector(".leaflet-popup");
+    if (popup) {
+      popup.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 100);
 }
 
 function openRoute(placeId) {
