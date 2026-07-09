@@ -411,24 +411,16 @@ async function resolveImages(data, options) {
     return url;
   });
 
+  // Verificar que Firebase esté habilitado y el usuario autenticado
+  if (files.length > 0 && (!state.useFirebase || !state.user)) {
+    throw new Error("firebase-required-for-images");
+  }
+
   const uploadedUrls = [];
-  let hadLocalFallback = false;
   for (const file of files) {
-    try {
-      if (state.useFirebase && state.user) {
-        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
-        uploadedUrls.push(uploadedUrl);
-      } else {
-        const localUrl = await readFileAsDataUrl(file);
-        uploadedUrls.push(localUrl);
-      }
-    } catch (error) {
-      // Fallback keeps the published item from losing the image if Storage is temporarily unavailable.
-      const localUrl = await readFileAsDataUrl(file);
-      uploadedUrls.push(localUrl);
-      hadLocalFallback = true;
-      error._usedLocalFallback = true;
-    }
+    // TODAS las imágenes DEBEN subirse a Firebase sin excepciones
+    const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
+    uploadedUrls.push(uploadedUrl);
   }
 
   const allUrls = [...uploadedUrls, ...validUrls];
@@ -438,7 +430,7 @@ async function resolveImages(data, options) {
 
   return {
     imageUrls: allUrls,
-    hadLocalFallback
+    hadLocalFallback: false
   };
 }
 
@@ -455,28 +447,21 @@ async function resolveServiceImages(data) {
     .getAll("imageFiles")
     .filter((entry) => entry instanceof File && entry.size > 0);
 
-  const uploadedUrls = [];
-  let hadUploadErrors = false;
+  // Verificar que Firebase esté habilitado y el usuario autenticado
+  if (files.length > 0 && (!state.useFirebase || !state.user)) {
+    throw new Error("firebase-required-for-images");
+  }
 
+  const uploadedUrls = [];
   for (const file of files) {
-    try {
-      if (state.useFirebase && state.user) {
-        const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, "services");
-        uploadedUrls.push(uploadedUrl);
-      } else {
-        const localUrl = await readFileAsDataUrl(file);
-        uploadedUrls.push(localUrl);
-      }
-    } catch {
-      const localUrl = await readFileAsDataUrl(file);
-      uploadedUrls.push(localUrl);
-      hadUploadErrors = true;
-    }
+    // TODAS las imágenes DEBEN subirse a Firebase sin excepciones
+    const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, "services");
+    uploadedUrls.push(uploadedUrl);
   }
 
   return {
     imageUrls: [...uploadedUrls, ...validUrls],
-    hadUploadErrors
+    hadUploadErrors: false
   };
 }
 
@@ -1707,7 +1692,13 @@ async function publishPlace(data) {
     hadLocalFallback = resolved.hadLocalFallback;
   } catch (error) {
     const message = String(error?.message || "");
-    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.imageUploadError"), "error");
+    if (message.includes("firebase-required-for-images")) {
+      notify(t("msg.firebaseSignInRequired"), "error");
+    } else if (message.includes("invalid-image-url")) {
+      notify(t("msg.invalidImage"), "error");
+    } else {
+      notify(t("msg.imageUploadError"), "error");
+    }
     return;
   }
 
@@ -1771,7 +1762,13 @@ async function publishService(data) {
     hadImageUploadErrors = resolved.hadUploadErrors;
   } catch (error) {
     const message = String(error?.message || "");
-    notify(message.includes("invalid-image-url") ? t("msg.invalidImage") : t("msg.serviceSaveError"), "error");
+    if (message.includes("firebase-required-for-images")) {
+      notify(t("msg.firebaseSignInRequired"), "error");
+    } else if (message.includes("invalid-image-url")) {
+      notify(t("msg.invalidImage"), "error");
+    } else {
+      notify(t("msg.serviceSaveError"), "error");
+    }
     return;
   }
 
