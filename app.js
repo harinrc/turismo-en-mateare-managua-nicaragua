@@ -1191,6 +1191,7 @@ function redrawMarkers() {
     marker.serviceId = service.id;
     marker.isService = true;
     marker.bindPopup(`
+      ${buildImageTag(service.imageUrl || DEFAULT_PLACE_IMAGE, service.name, "service-image")}
       <strong>${service.name}</strong><br>
       <small>${t("publish.serviceType")}: ${t(`publish.${service.type}`)}</small><br>
       <small>${t("publish.contact")}: ${service.contact}</small><br>
