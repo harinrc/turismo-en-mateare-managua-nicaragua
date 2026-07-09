@@ -660,6 +660,8 @@ function buildModerationPlaceMarkup(place, options = {}) {
 function buildModerationServiceMarkup(service, options = {}) {
   const statusClass = options.statusClass || (service.status || "pending");
   const gallery = buildFadeSlideshow(service.imageUrls?.length ? service.imageUrls : [DEFAULT_PLACE_IMAGE], service.name, "moderation-thumb");
+  const latText = Number.isFinite(service.lat) ? Number(service.lat).toFixed(6) : "-";
+  const lngText = Number.isFinite(service.lng) ? Number(service.lng).toFixed(6) : "-";
 
   return `
     ${gallery}
@@ -668,6 +670,7 @@ function buildModerationServiceMarkup(service, options = {}) {
     <p class="moderation-meta">${t("publish.serviceType")}: ${formatServiceType(service.type)}</p>
     <p class="moderation-meta">${t("publish.contact")}: ${service.contact || "-"}</p>
     <p class="moderation-meta">${t("publish.schedule")}: ${service.schedule || "-"}</p>
+    <p class="moderation-meta">Lat: ${latText} · Lng: ${lngText}</p>
     <p class="moderation-meta">${t("admin.createdBy")}: ${service.createdByName || "Comunidad"}</p>
   `;
 }
@@ -721,19 +724,25 @@ function renderCommunityFeed() {
   refs.communityFeed.innerHTML = "";
 
   const placeItems = visiblePlaces.slice(0, 4).map((place) => ({
-    type: t("feed.place"),
+    type: "place",
     title: place.name,
     meta: formatCategory(place.category),
     contact: "",
-    imageUrls: place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE]
+    imageUrls: place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE],
+    id: place.id,
+    lat: place.lat,
+    lng: place.lng
   }));
 
   const serviceItems = visibleServices.slice(0, 4).map((service) => ({
-    type: t("feed.service"),
+    type: "service",
     title: service.name,
-    meta: `${service.type} · ${service.schedule}`,
+    meta: `${formatServiceType(service.type)} · ${service.schedule}`,
     contact: service.contact || "",
-    imageUrls: service.imageUrls || []
+    imageUrls: service.imageUrls || [DEFAULT_PLACE_IMAGE],
+    id: service.id,
+    lat: service.lat,
+    lng: service.lng
   }));
 
   [...placeItems, ...serviceItems]
@@ -748,7 +757,28 @@ function renderCommunityFeed() {
       const statusLine = shouldShowCommunityStatus(item)
         ? `<p class="feed-status"><span class="status-pill ${item.status}">${getStatusLabel(item.status)}</span></p>`
         : "";
-      card.innerHTML = `<strong>${item.type}</strong><h4>${item.title}</h4><p>${item.meta}</p>${statusLine}${contactLine}${maybeImage}`;
+      
+      // Agregar botones de mapa solo si hay ubicación
+      let mapButtons = "";
+      if (Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
+        if (item.type === "place") {
+          mapButtons = `
+            <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
+              <button class="btn btn-primary" type="button" data-map-route="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
+              <button class="btn btn-map-card" type="button" data-map-card="${item.id}" style="font-size: 0.8rem;">${t("map.viewCard")}</button>
+            </div>
+          `;
+        } else {
+          mapButtons = `
+            <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
+              <button class="btn btn-accent" type="button" data-map-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewCard")}</button>
+            </div>
+          `;
+        }
+      }
+      
+      const typeLabel = item.type === "place" ? t("feed.place") : t("feed.service");
+      card.innerHTML = `<strong>${typeLabel}</strong><h4>${item.title}</h4><p>${item.meta}</p>${statusLine}${contactLine}${maybeImage}${mapButtons}`;
       refs.communityFeed.appendChild(card);
     });
 
@@ -1429,7 +1459,7 @@ function openAdminEditor(entity, itemId) {
 
   const isPlace = entity === "place";
   refs.editorCategoryLabel.hidden = !isPlace;
-  refs.editorCoordsRow.hidden = !isPlace;
+  refs.editorCoordsRow.hidden = false;  // Mostrar para ambos
   refs.editorDescriptionLabel.hidden = !isPlace;
   refs.editorTypeLabel.hidden = isPlace;
   refs.editorServiceRow.hidden = isPlace;
@@ -1443,6 +1473,8 @@ function openAdminEditor(entity, itemId) {
     refs.editorType.value = source.type || "actividad";
     refs.editorContact.value = source.contact || "";
     refs.editorSchedule.value = source.schedule || "";
+    refs.editorLat.value = Number.isFinite(source.lat) ? source.lat : "";
+    refs.editorLng.value = Number.isFinite(source.lng) ? source.lng : "";
   }
 
   refs.adminEditorForm.hidden = false;
@@ -2118,6 +2150,8 @@ async function saveAdminChanges(event) {
         type: refs.editorType.value,
         contact: refs.editorContact.value.trim(),
         schedule: refs.editorSchedule.value.trim(),
+        lat: Number(refs.editorLat.value),
+        lng: Number(refs.editorLng.value),
         imageUrls,
         imageUrl: imageUrls[0] || "",
         status,
