@@ -1078,7 +1078,17 @@ function setCoordinates(lat, lng, formType, options = {}) {
     if (pickerMarker) {
       pickerMarker.setLatLng([safeLat, safeLng]);
     } else {
-      pickerMarker = L.marker([safeLat, safeLng], { opacity: 0.9 }).addTo(state.map);
+      // Crear ícono con color según el tipo de formulario
+      const markerColor = formType === "service" ? "#ff9f1c" : "#1e8a5f";  // Naranja para servicios, Verde para lugares
+      const markerIcon = L.divIcon({
+        html: `<div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); font-size: 16px;">${formType === "service" ? "S" : "L"}</div>`,
+        className: "picker-marker",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+      });
+      
+      pickerMarker = L.marker([safeLat, safeLng], { icon: markerIcon, opacity: 0.95 }).addTo(state.map);
       pickerMarker.bindPopup(t("publish.pickOnMap"));
     }
 
