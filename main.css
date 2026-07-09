@@ -578,17 +578,40 @@ form textarea {
   align-items: start;
 }
 
+.weather-alert-grid > * {
+  min-width: 0;
+}
+
 .weather-controls {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.55rem;
   align-items: end;
+  min-width: 0;
 }
 
 .weather-controls label {
   grid-column: 1 / -1;
   font-size: 0.9rem;
   color: var(--text-soft);
+}
+
+.weather-controls select,
+.weather-controls button,
+#clima,
+#alertas,
+.panel-head,
+.panel-head h2,
+.weather-box,
+.alerts-sync-status,
+.alerts-list {
+  min-width: 0;
+}
+
+.panel-head h2,
+.alerts-sync-status,
+.alert-item {
+  overflow-wrap: anywhere;
 }
 
 .weather-box {
@@ -1130,6 +1153,10 @@ form textarea {
     margin: 2.1rem auto;
   }
 
+  .weather-alert-grid {
+    gap: 0.85rem;
+  }
+
   .topbar {
     padding: 0.8rem 0.85rem;
   }
@@ -1165,8 +1192,14 @@ form textarea {
     grid-template-columns: 1fr;
   }
 
+  .weather-controls select,
   .weather-controls button {
     width: 100%;
+  }
+
+  .weather-box,
+  .alert-item {
+    padding-inline: 0.8rem;
   }
 
   .row-2 {
