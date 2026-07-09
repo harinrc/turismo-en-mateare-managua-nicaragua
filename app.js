@@ -2063,10 +2063,7 @@ function setupInteractions() {
     const slideshow = target.closest(".fade-slideshow");
     if (!(slideshow instanceof HTMLElement)) return;
 
-    const tappedSlide = target.closest("img.fade-slide");
-    const activeSlide = tappedSlide instanceof HTMLImageElement
-      ? tappedSlide
-      : getMostVisibleSlide(slideshow);
+    const activeSlide = getMostVisibleSlide(slideshow);
     if (!(activeSlide instanceof HTMLImageElement)) return;
 
     const slides = [...slideshow.querySelectorAll("img.fade-slide")]
