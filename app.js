@@ -773,14 +773,14 @@ function renderCommunityFeed() {
           mapButtons = `
             <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
               <button class="btn btn-primary" type="button" data-map-route="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
-              <button class="btn btn-map-card" type="button" data-map-card="${item.id}" style="font-size: 0.8rem;">${t("map.viewCard")}</button>
+              <button class="btn btn-map-card" type="button" data-map-view-location-place="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
             </div>
           `;
         } else {
           mapButtons = `
             <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
               <button class="btn btn-primary" type="button" data-map-route-service="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
-              <button class="btn btn-accent" type="button" data-map-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
+              <button class="btn btn-accent" type="button" data-map-view-location-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
             </div>
           `;
         }
@@ -1295,12 +1295,27 @@ function goToPlace(placeId) {
   state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
 }
 
+// Vuela al lugar SIN abrir popup (para "Ver en mapa" desde tarjeta)
+function goToPlaceLocation(placeId) {
+  const place = getVisiblePlaces().find((p) => p.id === placeId);
+  if (!place || !state.map) return;
+  state.selectedPlaceId = placeId;
+  state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
+}
+
 function goToService(serviceId) {
   const service = state.services.find((s) => s.id === serviceId);
   if (!service || !state.map) return;
   state.map.once("moveend", () => {
     openServiceMarkerPopup(serviceId);
   });
+  state.map.flyTo([service.lat, service.lng], 14, { duration: 1.2 });
+}
+
+// Vuela al servicio SIN abrir popup (para "Ver en mapa" desde tarjeta)
+function goToServiceLocation(serviceId) {
+  const service = state.services.find((s) => s.id === serviceId);
+  if (!service || !state.map) return;
   state.map.flyTo([service.lat, service.lng], 14, { duration: 1.2 });
 }
 
@@ -2375,12 +2390,29 @@ function setupInteractions() {
       return;
     }
 
+    const mapViewLocationPlace = target.closest("button[data-map-view-location-place]");
+    if (mapViewLocationPlace instanceof HTMLButtonElement) {
+      const placeId = mapViewLocationPlace.getAttribute("data-map-view-location-place");
+      if (!placeId) return;
+
+      goToPlaceLocation(placeId);
+      return;
+    }
+
+    const mapViewLocationService = target.closest("button[data-map-view-location-service]");
+    if (mapViewLocationService instanceof HTMLButtonElement) {
+      const serviceId = mapViewLocationService.getAttribute("data-map-view-location-service");
+      if (!serviceId) return;
+
+      goToServiceLocation(serviceId);
+      return;
+    }
+
     const mapCardButton = target.closest("button[data-map-card]");
     if (mapCardButton instanceof HTMLButtonElement) {
       const placeId = mapCardButton.getAttribute("data-map-card");
       if (!placeId) return;
 
-      goToPlace(placeId);
       focusPlaceCard(placeId);
       state.map?.closePopup();
       return;
@@ -2391,7 +2423,6 @@ function setupInteractions() {
       const serviceId = mapServiceButton.getAttribute("data-map-service");
       if (!serviceId) return;
 
-      goToService(serviceId);
       focusServiceCard(serviceId);
       state.map?.closePopup();
       return;
