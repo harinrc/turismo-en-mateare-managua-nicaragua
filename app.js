@@ -221,11 +221,43 @@ function isValidImageUrl(value) {
   }
 }
 
+const MAX_IMAGE_SIZE_MB = 10; // 10 MB máximo
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
+    // Validar tamaño del archivo
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      reject(new Error(`image-too-large:${MAX_IMAGE_SIZE_MB}MB`));
+      return;
+    }
+
+    // Validar tipo de archivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      reject(new Error('image-invalid-type'));
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = reject;
+    
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      if (!result) {
+        reject(new Error('image-read-empty'));
+        return;
+      }
+      resolve(result);
+    };
+    
+    reader.onerror = () => {
+      reject(new Error(`image-read-error:${reader.error?.message || 'Unknown'}`));
+    };
+    
+    reader.onabort = () => {
+      reject(new Error('image-read-aborted'));
+    };
+    
     reader.readAsDataURL(file);
   });
 }
@@ -2248,8 +2280,26 @@ function setupInteractions() {
         return;
       }
 
-      const base64 = await readFileAsDataUrl(file);
-      setPlacePreview(base64);
+      try {
+        setPlacePreview(""); // Limpiar vista previa mientras se procesa
+        const base64 = await readFileAsDataUrl(file);
+        setPlacePreview(base64);
+      } catch (error) {
+        const message = String(error?.message || "");
+        if (message.includes("image-too-large")) {
+          const match = message.match(/(\d+)MB/);
+          const maxSize = match ? match[1] : "10";
+          notify(`Imagen muy grande (maximo: ${maxSize}MB)`, "error");
+        } else if (message.includes("image-invalid-type")) {
+          notify("Formato de imagen no valido. Usa JPG, PNG, GIF o WebP", "error");
+        } else if (message.includes("image-read-error")) {
+          notify("Error al leer la imagen. Intenta con otro archivo", "error");
+        } else {
+          notify("Error al procesar la imagen", "error");
+        }
+        setPlacePreview("");
+        input.value = ""; // Limpiar el input para permitir reintentar
+      }
     });
   }
 
