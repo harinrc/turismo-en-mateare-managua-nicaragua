@@ -78,6 +78,7 @@ const refs = {
   installDismissBtn: document.getElementById("installDismissBtn"),
   imageLightbox: document.getElementById("imageLightbox"),
   imageLightboxBackdrop: document.getElementById("imageLightboxBackdrop"),
+  imageLightboxFrame: document.getElementById("imageLightboxFrame"),
   imageLightboxImg: document.getElementById("imageLightboxImg"),
   lightboxClose: document.getElementById("lightboxClose"),
   lightboxPrev: document.getElementById("lightboxPrev"),
@@ -133,6 +134,14 @@ let lightboxScale = 1;
 let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchStartX = 0;
+let lightboxTouchStartY = 0;
+let lightboxPanX = 0;
+let lightboxPanY = 0;
+let lightboxIsDragging = false;
+let lightboxDragStartX = 0;
+let lightboxDragStartY = 0;
+let lightboxPanStartX = 0;
+let lightboxPanStartY = 0;
 let placeCardFocusTimer = null;
 const moderationActionLocks = new Set();
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
@@ -1558,12 +1567,42 @@ function notify(message, type = "info") {
   }, 3200);
 }
 
+function getLightboxPanLimits() {
+  if (!refs.imageLightboxImg) {
+    return { maxX: 0, maxY: 0 };
+  }
+
+  const width = refs.imageLightboxImg.clientWidth;
+  const height = refs.imageLightboxImg.clientHeight;
+  const maxX = Math.max(0, (width * lightboxScale - width) / 2);
+  const maxY = Math.max(0, (height * lightboxScale - height) / 2);
+  return { maxX, maxY };
+}
+
+function clampLightboxPan() {
+  const { maxX, maxY } = getLightboxPanLimits();
+  lightboxPanX = Math.min(maxX, Math.max(-maxX, lightboxPanX));
+  lightboxPanY = Math.min(maxY, Math.max(-maxY, lightboxPanY));
+}
+
+function applyLightboxTransform() {
+  if (!refs.imageLightboxImg) return;
+  refs.imageLightboxImg.style.transform = `translate(${lightboxPanX}px, ${lightboxPanY}px) scale(${lightboxScale})`;
+}
+
 function setLightboxScale(nextScale) {
   if (!refs.imageLightboxImg) return;
 
   const clamped = Math.min(3.5, Math.max(1, nextScale));
   lightboxScale = clamped;
-  refs.imageLightboxImg.style.transform = `scale(${lightboxScale})`;
+
+  if (lightboxScale <= 1) {
+    lightboxPanX = 0;
+    lightboxPanY = 0;
+  }
+
+  clampLightboxPan();
+  applyLightboxTransform();
 }
 
 function renderLightboxImage(index) {
@@ -1574,6 +1613,9 @@ function renderLightboxImage(index) {
   const current = lightboxImages[safeIndex];
   refs.imageLightboxImg.src = current.src;
   refs.imageLightboxImg.alt = current.alt || "";
+  lightboxPanX = 0;
+  lightboxPanY = 0;
+  applyLightboxTransform();
 }
 
 function showPrevLightboxImage() {
@@ -1608,6 +1650,9 @@ function closeImageLightbox() {
   refs.imageLightboxImg.alt = "";
   lightboxImages = [];
   lightboxIndex = 0;
+  lightboxPanX = 0;
+  lightboxPanY = 0;
+  lightboxIsDragging = false;
   document.body.style.overflow = "";
 }
 
@@ -2018,7 +2063,10 @@ function setupInteractions() {
     const slideshow = target.closest(".fade-slideshow");
     if (!(slideshow instanceof HTMLElement)) return;
 
-    const activeSlide = getMostVisibleSlide(slideshow);
+    const tappedSlide = target.closest("img.fade-slide");
+    const activeSlide = tappedSlide instanceof HTMLImageElement
+      ? tappedSlide
+      : getMostVisibleSlide(slideshow);
     if (!(activeSlide instanceof HTMLImageElement)) return;
 
     const slides = [...slideshow.querySelectorAll("img.fade-slide")]
@@ -2045,13 +2093,18 @@ function setupInteractions() {
     const touch = event.touches?.[0];
     if (!touch) return;
     lightboxTouchStartX = touch.clientX;
+    lightboxTouchStartY = touch.clientY;
   }, { passive: true });
 
   refs.imageLightboxImg?.addEventListener("touchend", (event) => {
+    if (lightboxScale > 1) return;
+
     const touch = event.changedTouches?.[0];
     if (!touch) return;
     const deltaX = touch.clientX - lightboxTouchStartX;
-    if (Math.abs(deltaX) < 35) return;
+    const deltaY = touch.clientY - lightboxTouchStartY;
+    if (Math.abs(deltaX) < 70) return;
+    if (Math.abs(deltaX) < Math.abs(deltaY) * 1.3) return;
 
     if (deltaX < 0) {
       showNextLightboxImage();
@@ -2059,6 +2112,45 @@ function setupInteractions() {
       showPrevLightboxImage();
     }
   }, { passive: true });
+
+  refs.imageLightboxFrame?.addEventListener("pointerdown", (event) => {
+    if (refs.imageLightbox?.hidden || lightboxScale <= 1) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    event.preventDefault();
+    lightboxIsDragging = true;
+    lightboxDragStartX = event.clientX;
+    lightboxDragStartY = event.clientY;
+    lightboxPanStartX = lightboxPanX;
+    lightboxPanStartY = lightboxPanY;
+
+    if (refs.imageLightboxImg) {
+      refs.imageLightboxImg.style.transition = "none";
+    }
+  });
+
+  refs.imageLightboxFrame?.addEventListener("pointermove", (event) => {
+    if (!lightboxIsDragging || lightboxScale <= 1) return;
+
+    const deltaX = event.clientX - lightboxDragStartX;
+    const deltaY = event.clientY - lightboxDragStartY;
+    lightboxPanX = lightboxPanStartX + deltaX;
+    lightboxPanY = lightboxPanStartY + deltaY;
+    clampLightboxPan();
+    applyLightboxTransform();
+  });
+
+  const stopLightboxDrag = () => {
+    if (!lightboxIsDragging) return;
+    lightboxIsDragging = false;
+    if (refs.imageLightboxImg) {
+      refs.imageLightboxImg.style.transition = "transform 180ms ease";
+    }
+  };
+
+  refs.imageLightboxFrame?.addEventListener("pointerup", stopLightboxDrag);
+  refs.imageLightboxFrame?.addEventListener("pointercancel", stopLightboxDrag);
+  refs.imageLightboxFrame?.addEventListener("pointerleave", stopLightboxDrag);
 
   refs.imageLightboxImg?.addEventListener("wheel", (event) => {
     if (refs.imageLightbox?.hidden) return;

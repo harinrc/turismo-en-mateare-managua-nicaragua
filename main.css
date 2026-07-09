@@ -846,6 +846,8 @@ form textarea {
   background: rgba(7, 18, 28, 0.82);
   overflow: auto;
   max-height: 70vh;
+  touch-action: none;
+  cursor: grab;
 }
 
 .image-lightbox-img {
@@ -855,6 +857,8 @@ form textarea {
   margin: 0 auto;
   transform-origin: center center;
   transition: transform 180ms ease;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .image-lightbox-hint {

@@ -291,7 +291,7 @@ export const i18n = {
     "gallery.zoomOut": "Alejar",
     "gallery.reset": "Reiniciar",
     "gallery.close": "Cerrar",
-    "gallery.hint": "Consejo: puedes acercar y alejar para ver detalles."
+    "gallery.hint": "Consejo: desliza para cambiar foto y, cuando hagas zoom, arrastra para moverte por la imagen."
   },
   en: {
     "nav.home": "Home",
@@ -500,6 +500,6 @@ export const i18n = {
     "gallery.zoomOut": "Zoom out",
     "gallery.reset": "Reset",
     "gallery.close": "Close",
-    "gallery.hint": "Tip: you can zoom in and out to see details."
+    "gallery.hint": "Tip: swipe to change photo and, when zoomed in, drag to move around the image."
   }
 };
