@@ -966,6 +966,7 @@ function redrawMarkers() {
 
   getVisiblePlaces().forEach((place) => {
     const marker = L.marker([place.lat, place.lng]).addTo(state.map);
+    marker.placeId = place.id;
     marker.bindPopup(`
       <img class="place-image" src="${place.imageUrl || DEFAULT_PLACE_IMAGE}" alt="${place.name}">
       <strong>${place.name}</strong><br>${place.description}
@@ -978,6 +979,12 @@ function redrawMarkers() {
     });
     state.markers.push(marker);
   });
+}
+
+function openPlaceMarkerPopup(placeId) {
+  const marker = state.markers.find((item) => item?.placeId === placeId);
+  if (!marker) return;
+  marker.openPopup();
 }
 
 function focusPlaceCard(placeId) {
@@ -1021,6 +1028,9 @@ function goToPlace(placeId) {
   const place = getVisiblePlaces().find((p) => p.id === placeId);
   if (!place || !state.map) return;
   state.selectedPlaceId = placeId;
+  state.map.once("moveend", () => {
+    openPlaceMarkerPopup(placeId);
+  });
   state.map.flyTo([place.lat, place.lng], 14, { duration: 1.2 });
 }
 
