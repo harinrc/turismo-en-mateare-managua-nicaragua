@@ -148,6 +148,7 @@ let lightboxDragStartY = 0;
 let lightboxPanStartX = 0;
 let lightboxPanStartY = 0;
 let placeCardFocusTimer = null;
+let serviceCardFocusTimer = null;
 const moderationActionLocks = new Set();
 const INSTALL_BANNER_DISMISS_KEY = "mateare_install_banner_dismissed_v1";
 const INSTALL_BANNER_DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -305,10 +306,6 @@ function normalizeService(service) {
     imageUrls.push(service.imageUrl);
   }
 
-  // Proporcionar ubicaciones por defecto si no existen
-  const lat = Number.isFinite(service.lat) ? service.lat : 12.2424;
-  const lng = Number.isFinite(service.lng) ? service.lng : -86.4318;
-
   return {
     id: service.id,
     name: service.name,
@@ -320,8 +317,8 @@ function normalizeService(service) {
     status: service.status || "approved",
     createdByName: service.createdByName || "Comunidad",
     createdByUid: service.createdByUid || null,
-    lat,
-    lng
+    lat: service.lat,
+    lng: service.lng
   };
 }
 
@@ -756,6 +753,11 @@ function renderCommunityFeed() {
     .forEach((item) => {
       const card = document.createElement("article");
       card.className = "feed-card";
+      if (item.type === "place") {
+        card.dataset.placeId = item.id;
+      } else {
+        card.dataset.serviceId = item.id;
+      }
       const maybeImage = item.imageUrls?.length
         ? buildFadeSlideshow(item.imageUrls, item.title, "feed-thumb")
         : "";
@@ -1237,6 +1239,35 @@ function focusPlaceCard(placeId) {
   }
 
   placeCardFocusTimer = setTimeout(() => {
+    card.classList.remove("is-map-focused");
+  }, 1800);
+}
+
+function focusServiceCard(serviceId) {
+  if (!refs.communityFeed) return;
+
+  const service = getVisibleServices().find((item) => item.id === serviceId);
+  if (!service) return;
+
+  renderCommunityFeed();
+
+  const cards = [...refs.communityFeed.querySelectorAll(".feed-card[data-service-id]")];
+  const card = cards.find((item) => item.getAttribute("data-service-id") === serviceId);
+  if (!(card instanceof HTMLElement)) return;
+
+  cards.forEach((item) => item.classList.remove("is-map-focused"));
+  card.classList.add("is-map-focused");
+
+  document.getElementById("comunidad")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(() => {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 180);
+
+  if (serviceCardFocusTimer) {
+    clearTimeout(serviceCardFocusTimer);
+  }
+
+  serviceCardFocusTimer = setTimeout(() => {
     card.classList.remove("is-map-focused");
   }, 1800);
 }
@@ -2317,6 +2348,7 @@ function setupInteractions() {
       if (!serviceId) return;
 
       goToService(serviceId);
+      focusServiceCard(serviceId);
       state.map?.closePopup();
       return;
     }
