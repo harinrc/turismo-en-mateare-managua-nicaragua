@@ -1015,33 +1015,69 @@ function getWeatherSuggestionKey(current) {
   const wind = Number(current.wind_speed_10m || 0);
   const temp = Number(current.temperature_2m || 0);
   const isDay = Number(current.is_day || 0) === 1;
+  const conditionKey = getWeatherConditionKey(current.weather_code);
 
-  if (rain >= 0.3 || ["weather.condition.rain", "weather.condition.storm"].includes(getWeatherConditionKey(current.weather_code))) {
-    return "weather.suggestion.rain";
+  if (conditionKey === "weather.condition.storm") {
+    return "weather.suggestion.storm";
   }
 
-  if (wind >= 28) {
-    return "weather.suggestion.wind";
+  if (rain >= 4) {
+    return "weather.suggestion.heavyRain";
   }
 
-  if (isDay && temp >= 34) {
-    return "weather.suggestion.heat";
+  if (conditionKey === "weather.condition.rain" || rain >= 0.3) {
+    return rain >= 1.5 ? "weather.suggestion.rainRoutes" : "weather.suggestion.rainLight";
   }
 
-  if (!isDay && temp <= 22) {
+  if (conditionKey === "weather.condition.drizzle") {
+    return "weather.suggestion.drizzle";
+  }
+
+  if (conditionKey === "weather.condition.fog") {
+    return "weather.suggestion.fog";
+  }
+
+  if (wind >= 36) {
+    return "weather.suggestion.strongWind";
+  }
+
+  if (wind >= 22) {
+    return isDay ? "weather.suggestion.windViewpoints" : "weather.suggestion.windNight";
+  }
+
+  if (isDay && temp >= 35) {
+    return "weather.suggestion.heatExtreme";
+  }
+
+  if (isDay && temp >= 31) {
+    return "weather.suggestion.heatWalks";
+  }
+
+  if (!isDay && temp <= 20) {
     return "weather.suggestion.coolNight";
   }
 
-  const conditionKey = getWeatherConditionKey(current.weather_code);
+  if (!isDay && temp >= 28) {
+    return "weather.suggestion.warmNight";
+  }
+
   if (conditionKey === "weather.condition.clear" && isDay) {
-    return "weather.suggestion.sunDay";
+    return temp >= 28 ? "weather.suggestion.sunDayHydrate" : "weather.suggestion.sunDayExplore";
   }
 
   if (conditionKey === "weather.condition.clear" && !isDay) {
-    return "weather.suggestion.clearNight";
+    return wind >= 15 ? "weather.suggestion.clearNightBreeze" : "weather.suggestion.clearNightCalm";
   }
 
-  return "weather.suggestion.cloudy";
+  if (conditionKey === "weather.condition.partlyCloudy") {
+    return isDay ? "weather.suggestion.partlyCloudyDay" : "weather.suggestion.partlyCloudyNight";
+  }
+
+  if (conditionKey === "weather.condition.cloudy") {
+    return isDay ? "weather.suggestion.cloudyDay" : "weather.suggestion.cloudyNight";
+  }
+
+  return isDay ? "weather.suggestion.stableDay" : "weather.suggestion.stableNight";
 }
 
 function getWeatherIcon(current) {
