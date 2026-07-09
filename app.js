@@ -449,10 +449,21 @@ async function resolveImages(data, options) {
   }
 
   const uploadedUrls = [];
+  const failedFiles = [];
+  
+  // Intentar subir cada imagen por separado
   for (const file of files) {
-    // TODAS las imágenes DEBEN subirse a Firebase sin excepciones
-    const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
-    uploadedUrls.push(uploadedUrl);
+    try {
+      const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, uploadFolder);
+      uploadedUrls.push(uploadedUrl);
+    } catch (error) {
+      // Si una imagen falla, guardarla en lista de errores pero continuar
+      failedFiles.push({
+        name: file.name,
+        error: String(error?.message || "Error desconocido")
+      });
+      console.error(`Failed to upload ${file.name}:`, error);
+    }
   }
 
   const allUrls = [...uploadedUrls, ...validUrls];
@@ -462,7 +473,10 @@ async function resolveImages(data, options) {
 
   return {
     imageUrls: allUrls,
-    hadLocalFallback: false
+    hadLocalFallback: false,
+    failedFiles: failedFiles,
+    uploadedCount: uploadedUrls.length,
+    totalCount: files.length
   };
 }
 
@@ -485,15 +499,29 @@ async function resolveServiceImages(data) {
   }
 
   const uploadedUrls = [];
+  const failedFiles = [];
+  
+  // Intentar subir cada imagen por separado
   for (const file of files) {
-    // TODAS las imágenes DEBEN subirse a Firebase sin excepciones
-    const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, "services");
-    uploadedUrls.push(uploadedUrl);
+    try {
+      const uploadedUrl = await firebaseClient.uploadImage(file, state.user.uid, "services");
+      uploadedUrls.push(uploadedUrl);
+    } catch (error) {
+      // Si una imagen falla, guardarla en lista de errores pero continuar
+      failedFiles.push({
+        name: file.name,
+        error: String(error?.message || "Error desconocido")
+      });
+      console.error(`Failed to upload ${file.name}:`, error);
+    }
   }
 
   return {
     imageUrls: [...uploadedUrls, ...validUrls],
-    hadUploadErrors: false
+    hadUploadErrors: failedFiles.length > 0,
+    failedFiles: failedFiles,
+    uploadedCount: uploadedUrls.length,
+    totalCount: files.length
   };
 }
 
@@ -1711,7 +1739,7 @@ async function publishPlace(data) {
   }
 
   let imageUrls = [DEFAULT_PLACE_IMAGE];
-  let hadLocalFallback = false;
+  let failedFiles = [];
 
   try {
     const resolved = await resolveImages(data, {
@@ -1721,7 +1749,7 @@ async function publishPlace(data) {
       uploadFolder: "places"
     });
     imageUrls = resolved.imageUrls;
-    hadLocalFallback = resolved.hadLocalFallback;
+    failedFiles = resolved.failedFiles || [];
   } catch (error) {
     const message = String(error?.message || "");
     if (message.includes("firebase-required-for-images")) {
@@ -1772,10 +1800,13 @@ async function publishPlace(data) {
   setPlacePreview("");
   clearPlaceCoordinates(false);
   const placeMessage = payload.status === "pending" ? t("msg.placePending") : t("msg.placeSaved");
-  if (hadLocalFallback) {
-    notify(`${placeMessage} ${t("msg.imageUploadPartial")}`, "info");
+  
+  if (failedFiles.length > 0) {
+    const failedNames = failedFiles.map(f => f.name).join(", ");
+    notify(`${placeMessage} ⚠️ No se subieron: ${failedNames}`, "warning");
     return;
   }
+  
   notify(placeMessage, "success");
 }
 
@@ -1786,12 +1817,12 @@ async function publishService(data) {
   }
 
   let imageUrls = [];
-  let hadImageUploadErrors = false;
+  let failedFiles = [];
 
   try {
     const resolved = await resolveServiceImages(data);
     imageUrls = resolved.imageUrls;
-    hadImageUploadErrors = resolved.hadUploadErrors;
+    failedFiles = resolved.failedFiles || [];
   } catch (error) {
     const message = String(error?.message || "");
     if (message.includes("firebase-required-for-images")) {
@@ -1833,8 +1864,10 @@ async function publishService(data) {
 
   refs.serviceForm.reset();
   const serviceMessage = payload.status === "pending" ? t("msg.servicePending") : t("msg.serviceSaved");
-  if (hadImageUploadErrors) {
-    notify(`${serviceMessage} ${t("msg.imageUploadPartial")}`, "info");
+  
+  if (failedFiles.length > 0) {
+    const failedNames = failedFiles.map(f => f.name).join(", ");
+    notify(`${serviceMessage} ⚠️ No se subieron: ${failedNames}`, "warning");
     return;
   }
 
