@@ -515,6 +515,7 @@ form textarea {
   line-height: 1.15;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
@@ -524,6 +525,7 @@ form textarea {
   line-height: 1.45;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 5;
   -webkit-line-clamp: 5;
   overflow: hidden;
 }
@@ -1134,6 +1136,7 @@ form textarea {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.6rem 0.75rem;
+    overflow: visible;
   }
 
   .menu-btn {
