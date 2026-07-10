@@ -1357,15 +1357,25 @@ function redrawMarkers() {
     const marker = L.marker([service.lat, service.lng], { icon: serviceIcon }).addTo(state.map);
     marker.serviceId = service.id;
     marker.isService = true;
+    // Mapeo de tipos de servicio a claves de traducción
+    const typeMap = {
+      "alimentacion": "publish.food",
+      "hospedaje": "publish.lodging",
+      "actividad": "publish.activities"
+    };
+    const typeKey = typeMap[service.type] || service.type;
+    
     marker.bindPopup(`
-      ${buildImageTag(service.imageUrl || DEFAULT_PLACE_IMAGE, service.name, "service-image")}
-      <strong>${service.name}</strong><br>
-      <small>${t("publish.serviceType")}: ${t(`publish.${service.type}`)}</small><br>
-      <small>${t("publish.contact")}: ${service.contact}</small><br>
-      <small>${t("publish.schedule")}: ${service.schedule}</small>
-      <div class="actions" style="gap: 0.5rem; margin-top: 0.5rem;">
-        <button class="btn btn-primary" type="button" data-map-route-service="${service.id}" style="font-size: 0.85rem;">${t("guide.route")}</button>
-        <button class="btn btn-accent" type="button" data-map-service="${service.id}" style="font-size: 0.85rem;">${t("map.viewCard")}</button>
+      <div class="service-popup-content">
+        ${buildImageTag(service.imageUrl || DEFAULT_PLACE_IMAGE, service.name, "service-image")}
+        <strong>${service.name}</strong><br>
+        <small>${t("publish.serviceType")}: ${t(typeKey)}</small><br>
+        <small>${t("publish.contact")}: ${service.contact}</small><br>
+        <small>${t("publish.schedule")}: ${service.schedule}</small>
+        <div class="actions" style="gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn btn-primary" type="button" data-map-route-service="${service.id}" style="font-size: 0.85rem;">${t("guide.route")}</button>
+          <button class="btn btn-accent" type="button" data-map-service="${service.id}" style="font-size: 0.85rem;">${t("map.viewCard")}</button>
+        </div>
       </div>
     `);
     state.markers.push(marker);

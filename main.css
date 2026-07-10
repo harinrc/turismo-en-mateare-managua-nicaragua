@@ -440,6 +440,66 @@ a {
   flex-wrap: wrap;
 }
 
+/* Service popup responsive styles */
+.service-popup-content {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 240px;
+}
+
+.service-popup-content img {
+  width: 100%;
+  height: auto;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.service-popup-content strong {
+  font-size: 0.95rem;
+  margin: 0.2rem 0;
+  font-weight: 600;
+}
+
+.service-popup-content small {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  margin: 0.1rem 0;
+}
+
+.service-popup-content .actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive popup width for services based on screen size */
+@media (max-width: 768px) {
+  .service-popup-content {
+    max-width: 220px;
+  }
+  
+  .service-popup-content img {
+    max-height: 130px;
+  }
+}
+
+@media (max-width: 480px) {
+  .service-popup-content {
+    max-width: calc(100vw - 60px);
+  }
+  
+  .service-popup-content img {
+    max-height: 120px;
+  }
+  
+  .service-popup-content .actions button {
+    font-size: 0.7rem !important;
+    padding: 0.3rem 0.5rem !important;
+  }
+}
+
 .hero-panel {
   background: rgba(255, 250, 241, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.26);
