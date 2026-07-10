@@ -233,7 +233,21 @@ function isValidImageUrl(value) {
 function isHeicImageUrl(url) {
   if (!url || typeof url !== 'string') return false;
   const lowerUrl = url.toLowerCase();
-  return lowerUrl.endsWith('.heic') || lowerUrl.endsWith('.heif');
+  
+  // Check by URL extension
+  if (lowerUrl.endsWith('.heic') || lowerUrl.endsWith('.heif')) {
+    return true;
+  }
+  
+  // Check Firebase Storage URLs by filename patterns
+  // Pattern: ...%2Ffilename.heic or .../filename.heic
+  if (lowerUrl.includes('firebasestorage.googleapis.com')) {
+    if (lowerUrl.match(/(%2F|\/)[^%\/]*\.heic/i) || lowerUrl.match(/(%2F|\/)[^%\/]*\.heif/i)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 function filterHeicImages(imageUrls) {
@@ -259,20 +273,61 @@ const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 function detectHeicFile(file) {
   // Check by MIME type
   if (file.type === 'image/heic' || file.type === 'image/heif' || file.type === 'image/heif-sequence') {
-    return true;
+    console.warn(`Detected HEIC by MIME type: ${file.type}`);
+    return Promise.resolve(true);
   }
   
-  // Check by file extension
+  // Check by file extension (case-insensitive)
   const filename = file.name.toLowerCase();
   if (filename.endsWith('.heic') || filename.endsWith('.heif') || filename.endsWith('.heic-sequence')) {
-    return true;
+    console.warn(`Detected HEIC by extension: ${file.name}`);
+    return Promise.resolve(true);
   }
   
-  return false;
+  // Check by magic bytes (file signature) - HEIC files start with 'ftyp' signature
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const arrayBuffer = event.target?.result;
+          if (!(arrayBuffer instanceof ArrayBuffer)) {
+            resolve(false);
+            return;
+          }
+          const view = new Uint8Array(arrayBuffer);
+          if (view.length >= 12) {
+            // Check for 'ftyp' at offset 4
+            const ftypMarker = String.fromCharCode(view[4], view[5], view[6], view[7]);
+            if (ftypMarker === 'ftyp') {
+              // Check for HEIC brand
+              const brand = String.fromCharCode(view[8], view[9], view[10], view[11]);
+              if (brand.includes('heic') || brand.includes('heix') || brand === 'mif1') {
+                console.warn(`Detected HEIC by magic bytes: ftyp${brand}`);
+                resolve(true);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Error reading file magic bytes:', e);
+        }
+        resolve(false);
+      };
+      reader.onerror = () => {
+        console.warn('FileReader error checking magic bytes');
+        resolve(false);
+      };
+      reader.readAsArrayBuffer(file.slice(0, 12));
+    } catch (error) {
+      console.warn('Could not check file magic bytes:', error);
+      resolve(false);
+    }
+  });
 }
 
 function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     // Validar tamaño del archivo
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       reject(new Error(`image-too-large:${MAX_IMAGE_SIZE_MB}MB`));
@@ -280,16 +335,22 @@ function readFileAsDataUrl(file) {
     }
 
     // Detectar HEIC/HEIF (formato de iOS no soportado en web)
-    if (detectHeicFile(file)) {
-      reject(new Error('image-heic-format'));
-      return;
+    try {
+      const isHeic = await detectHeicFile(file);
+      if (isHeic) {
+        reject(new Error('image-heic-format'));
+        return;
+      }
+    } catch (error) {
+      console.warn('Error detecting HEIC:', error);
+      // No rechazar, continuar
     }
 
     // Validar tipo de archivo
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-    if (!validTypes.includes(file.type)) {
-      reject(new Error('image-invalid-type'));
-      return;
+    if (file.type && !validTypes.includes(file.type)) {
+      console.warn(`Unusual MIME type: ${file.name} -> ${file.type}`);
+      // Don't reject, just warn - browsers sometimes report wrong MIME types
     }
 
     const reader = new FileReader();
