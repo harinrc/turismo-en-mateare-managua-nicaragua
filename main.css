@@ -514,6 +514,53 @@ a {
   margin-top: 0;
 }
 
+.form-alert {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+  border-left: 4px solid;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.form-alert strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+
+.form-alert ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+.form-alert li {
+  margin: 0.3rem 0;
+}
+
+.form-alert.alert-warning {
+  background-color: rgba(255, 193, 7, 0.08);
+  border-left-color: #ffc107;
+  color: #856404;
+}
+
+.form-alert.alert-warning strong {
+  color: #d39e00;
+}
+
+.form-alert.alert-error {
+  background-color: rgba(244, 67, 54, 0.08);
+  border-left-color: #f44336;
+  color: #721c24;
+}
+
+.form-alert.alert-error strong {
+  color: #c82333;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

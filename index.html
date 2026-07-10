@@ -221,6 +221,17 @@
       <div class="forms-grid">
         <form class="panel reveal" id="placeForm">
           <h3 data-i18n="publish.placeTitle">Registrar lugar turístico</h3>
+          
+          <div class="form-alert alert-warning">
+            <strong>⚠️ Información importante:</strong>
+            <ul>
+              <li>✅ Formatos de imagen soportados: <strong>JPG, PNG, GIF, WebP</strong></li>
+              <li>❌ No puedes subir imágenes <strong>HEIC</strong> (formato de iPhone) - aparecerán rotas</li>
+              <li>📍 <strong>Ubicación en el mapa es OBLIGATORIA</strong> para publicar</li>
+              <li>📝 Todos los campos son opcionales excepto: nombre, descripción, categoría y ubicación</li>
+            </ul>
+          </div>
+          
           <label>
             <span data-i18n="publish.placeName">Nombre del lugar</span>
             <input required name="name" type="text" maxlength="80">
@@ -266,6 +277,17 @@
 
         <form class="panel reveal" id="serviceForm">
           <h3 data-i18n="publish.serviceTitle">Registrar servicio turístico</h3>
+          
+          <div class="form-alert alert-warning">
+            <strong>⚠️ Información importante:</strong>
+            <ul>
+              <li>✅ Formatos de imagen soportados: <strong>JPG, PNG, GIF, WebP</strong></li>
+              <li>❌ No puedes subir imágenes <strong>HEIC</strong> (formato de iPhone) - aparecerán rotas</li>
+              <li>📍 <strong>Ubicación en el mapa es OBLIGATORIA</strong> para publicar</li>
+              <li>📝 Todos los campos son opcionales excepto: nombre, tipo, contacto, horario y ubicación</li>
+            </ul>
+          </div>
+          
           <label>
             <span data-i18n="publish.serviceName">Nombre del servicio</span>
             <input required name="name" type="text" maxlength="80">

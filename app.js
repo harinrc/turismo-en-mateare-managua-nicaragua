@@ -2513,12 +2513,34 @@ async function saveAdminChanges(event) {
 function handleForms() {
   refs.placeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    
+    // Validar que la ubicación sea obligatoria
+    const placeLat = refs.placeLat?.value ? parseFloat(refs.placeLat.value) : null;
+    const placeLng = refs.placeLng?.value ? parseFloat(refs.placeLng.value) : null;
+    
+    if (!Number.isFinite(placeLat) || !Number.isFinite(placeLng)) {
+      notify("❌ Debes seleccionar una ubicación en el mapa antes de publicar", "error");
+      document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    
     const data = new FormData(refs.placeForm);
     await publishPlace(data);
   });
 
   refs.serviceForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    
+    // Validar que la ubicación sea obligatoria
+    const serviceLat = refs.serviceLat?.value ? parseFloat(refs.serviceLat.value) : null;
+    const serviceLng = refs.serviceLng?.value ? parseFloat(refs.serviceLng.value) : null;
+    
+    if (!Number.isFinite(serviceLat) || !Number.isFinite(serviceLng)) {
+      notify("❌ Debes seleccionar una ubicación en el mapa antes de publicar", "error");
+      document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    
     const data = new FormData(refs.serviceForm);
     await publishService(data);
   });
