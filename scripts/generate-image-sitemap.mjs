@@ -99,18 +99,28 @@ async function fetchFirestoreCollectionImages(projectId, apiKey, collectionName)
 }
 
 async function generateImageSitemap() {
+  console.log("Starting image sitemap generation...");
+  
   const [contentSource, firebaseConfigSource] = await Promise.all([
     fs.readFile(path.resolve("content.js"), "utf8"),
     fs.readFile(path.resolve("firebase-config.js"), "utf8")
   ]);
 
+  console.log("✓ Read content.js and firebase-config.js");
+
   const staticCandidates = extractStaticImageCandidates(contentSource);
   const { projectId, apiKey } = extractFirebaseConfig(firebaseConfigSource);
+
+  console.log(`Static images found: ${staticCandidates.length}`);
+  console.log(`Firebase Project ID: ${projectId}`);
 
   const [placeImages, serviceImages] = await Promise.all([
     fetchFirestoreCollectionImages(projectId, apiKey, "places"),
     fetchFirestoreCollectionImages(projectId, apiKey, "services")
   ]);
+
+  console.log(`Place images from Firestore: ${placeImages.length}`);
+  console.log(`Service images from Firestore: ${serviceImages.length}`);
 
   const allImages = [...staticCandidates, ...placeImages, ...serviceImages]
     .map(normalizeImageUrl)
@@ -118,6 +128,8 @@ async function generateImageSitemap() {
 
   const uniqueImages = [...new Set(allImages)];
   const today = new Date().toISOString().slice(0, 10);
+
+  console.log(`Total unique images: ${uniqueImages.length}`);
 
   const urlsXml = uniqueImages
     .map((imageUrl) => {
@@ -146,7 +158,7 @@ async function generateImageSitemap() {
   ].join("\n");
 
   await fs.writeFile(OUT_FILE, xml, "utf8");
-  console.log(`Generated sitemap-images.xml with ${uniqueImages.length} image entries.`);
+  console.log(`✓ Generated sitemap-images.xml with ${uniqueImages.length} image entries at ${OUT_FILE}`);
 }
 
 generateImageSitemap().catch((error) => {

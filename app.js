@@ -1570,6 +1570,56 @@ function syncWeatherSelector() {
   }
 }
 
+function updateImageSchema() {
+  // Remove old image schema
+  const oldSchema = document.querySelector('script[data-image-schema]');
+  if (oldSchema) oldSchema.remove();
+
+  // Collect all image URLs from places and services
+  const imageUrls = [];
+  
+  state.places.forEach((place) => {
+    if (Array.isArray(place.imageUrls)) {
+      place.imageUrls.forEach((url) => {
+        if (url && typeof url === 'string' && imageUrls.indexOf(url) === -1) {
+          imageUrls.push(url);
+        }
+      });
+    }
+  });
+
+  state.services.forEach((service) => {
+    if (Array.isArray(service.imageUrls)) {
+      service.imageUrls.forEach((url) => {
+        if (url && typeof url === 'string' && imageUrls.indexOf(url) === -1) {
+          imageUrls.push(url);
+        }
+      });
+    }
+  });
+
+  // Create ImageObject for each image
+  const images = imageUrls.map((url) => ({
+    "@type": "ImageObject",
+    "url": url,
+    "name": "Imagen turística de Mateare",
+    "description": "Imagen de un lugar o servicio turístico en Mateare, Nicaragua"
+  }));
+
+  if (images.length === 0) return;
+
+  // Create and inject schema
+  const schemaTag = document.createElement('script');
+  schemaTag.type = 'application/ld+json';
+  schemaTag.setAttribute('data-image-schema', 'true');
+  schemaTag.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": images
+  });
+
+  document.head.appendChild(schemaTag);
+}
+
 function refreshUiData() {
   renderGuides();
   syncWeatherSelector();
@@ -1577,6 +1627,7 @@ function refreshUiData() {
   renderCommunityFeed();
   renderWeather();
   renderModerationPanel();
+  updateImageSchema();
 }
 
 function getStatusLabel(status) {

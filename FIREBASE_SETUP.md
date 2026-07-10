@@ -150,3 +150,79 @@ node scripts/set-admin-claim.mjs "C:\ruta\a\serviceAccountKey.json" "djhjrc96@gm
 Nota de seguridad:
 - No guardes el archivo serviceAccountKey.json en GitHub.
 - Si la llave se filtra, revocala y genera una nueva.
+
+## 10) Indexacion completa de imagenes en Google Search Console
+
+Esta pagina implementa TRES mecanismos para que Google indexe tus imagenes:
+
+### Mecanismo 1: Schema.org ImageObject (AUTOMATICO - Tiempo real)
+- El archivo [app.js](app.js) genera automaticamente schema.org ImageObject cada vez que carga datos de Firestore.
+- Funciona en tiempo real sin necesidad de ejecutar scripts.
+- Google lee el schema directamente del HTML.
+- **No requiere acciones manuales**.
+
+### Mecanismo 2: sitemap-images.xml (Manual - Generado)
+- El script [generate-image-sitemap.mjs](scripts/generate-image-sitemap.mjs) extrae imagenes de:
+  1. Archivos estaticos (content.js)
+  2. Base de datos Firestore (places y services)
+- Antes de publicar cambios importantes, ejecuta:
+```powershell
+node scripts/generate-image-sitemap.mjs
+```
+- El archivo se genera en [sitemap-images.xml](sitemap-images.xml)
+- Ambos sitemaps estan listados en [robots.txt](robots.txt)
+
+### Mecanismo 3: Open Graph y metadatos (HTML)
+- El HTML incluye og:image tags con width/height especificados.
+- Tambien incluye metadatos para Twitter Cards y Pinterest.
+- Se actualiza automaticamente en [index.html](index.html)
+
+### Checklist: Que debe estar en Google Search Console
+1. Propiedad verificada: harinrc.github.io
+2. Sitemaps enviados:
+   - https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap.xml
+   - https://harinrc.github.io/turismo-en-mateare-managua-nicaragua/sitemap-images.xml
+3. Mostrar en Google Images habilitado:
+   - En Google Search Console, ve a "Appearance" > "Rich Results" y verifica que las imagenes esten siendo indexadas.
+
+### Workflow recomendado para actualizar imagenes
+1. Los usuarios suben imagenes (salen automaticamente en el sitio).
+2. App.js genera schema.org ImageObject automaticamente.
+3. Cada 1-2 semanas, ejecuta:
+```powershell
+node scripts/generate-image-sitemap.mjs
+```
+4. Git push/deploy a GitHub Pages.
+5. Google rastreara la pagina y actualizara el sitemap.
+6. En 1-7 dias, las nuevas imagenes aparecen en Google Images.
+
+### Diagnostico si las imagenes NO aparecen en Google Images
+1. Abre Google Search Console > "Coverage" > Verifica que la URL este indexada.
+2. En "Rich Results" revisa los errores de schema.org (si hay).
+3. En "Image Coverage" verifica el estado de tus imagenes.
+4. Usa Google Cache inspector para ver que HTML ve Google.
+5. Verifica que:
+   - Las URLs de imagen sean accesibles desde internet.
+   - El Content-Type sea image/* (no text/html).
+   - La imagen tenga ancho minimo 100px y alto minimo 100px.
+   - La imagen sea en formato JPG, PNG, GIF, SVG o WebP.
+
+### Problemas comunes
+
+**Las imagenes de Firestore no aparecen en sitemap-images.xml**
+- Verifica que los documentos en Firestore tengan el campo `imageUrls` (array de strings).
+- El campo debe ser un array: `imageUrls: ["https://...", "https://..."]`
+- Si esta vacio, el generador no lo incluira.
+
+**El sitemap dice "0 image entries"**
+- Solo extrae de content.js (imagenes estaticas).
+- Las imagenes de Firestore estan incluidas pero estan vacias.
+- Asegurate de que Firebase este guardando correctamente imageUrls.
+
+**Google dice "Unsupported image format"**
+- Verifica que la imagen sea JPG, PNG, GIF, SVG o WebP.
+- No soporta HEIC, BMP, TIFF.
+
+**Google dice "Image outside viewport"**
+- Las imagenes deben estar visibles en el viewport o tener og:image tags.
+- El sitio ya tiene og:image, asi que esta cubierto.
