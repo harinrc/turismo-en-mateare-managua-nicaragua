@@ -443,7 +443,7 @@ a {
 /* Service popup responsive styles */
 .service-popup-content {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.5rem;
   max-width: 240px;
 }
 
@@ -453,25 +453,42 @@ a {
   max-height: 140px;
   object-fit: cover;
   border-radius: var(--radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .service-popup-content strong {
-  font-size: 0.95rem;
-  margin: 0.2rem 0;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.3rem 0 0.2rem 0;
+  color: var(--primary);
+  line-height: 1.3;
 }
 
 .service-popup-content small {
-  font-size: 0.75rem;
-  line-height: 1.2;
-  margin: 0.1rem 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0.15rem 0;
+  color: #666;
 }
 
 .service-popup-content .actions {
   display: flex;
-  gap: 0.3rem;
-  margin-top: 0.4rem;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
   flex-wrap: wrap;
+}
+
+.service-popup-content .actions button {
+  font-weight: 600;
+  font-size: 0.85rem !important;
+  padding: 0.4rem 0.7rem !important;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.service-popup-content .actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive popup width for services based on screen size */
@@ -483,6 +500,14 @@ a {
   .service-popup-content img {
     max-height: 130px;
   }
+  
+  .service-popup-content strong {
+    font-size: 0.95rem;
+  }
+  
+  .service-popup-content small {
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -492,6 +517,14 @@ a {
   
   .service-popup-content img {
     max-height: 120px;
+  }
+  
+  .service-popup-content strong {
+    font-size: 0.9rem;
+  }
+  
+  .service-popup-content small {
+    font-size: 0.7rem;
   }
   
   .service-popup-content .actions button {
