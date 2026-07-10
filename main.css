@@ -542,12 +542,22 @@ a {
 }
 
 .form-alert.alert-warning {
+  background-color: rgba(255, 193, 7, 0.08);
+  border-left-color: #ffc107;
+  color: #856404;
+}
+
+.form-alert.alert-warning strong {
+  color: #d39e00;
+}
+
+#placeForm .form-alert.alert-warning {
   background-color: rgba(30, 138, 95, 0.1);
   border-left-color: #1e8a5f;
   color: #0d5a3d;
 }
 
-.form-alert.alert-warning strong {
+#placeForm .form-alert.alert-warning strong {
   color: #1e8a5f;
 }
 
