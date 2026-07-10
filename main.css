@@ -1082,10 +1082,11 @@ form textarea {
   position: fixed;
   inset: 0;
   z-index: 80;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 1rem;
-  justify-items: center;
+  overflow: hidden;
 }
 
 .image-lightbox-backdrop {
@@ -1097,8 +1098,8 @@ form textarea {
 
 .image-lightbox-panel {
   position: relative;
-  width: min(980px, calc(100vw - 1rem));
-  max-height: calc(100vh - 1rem);
+  width: min(980px, 100%);
+  max-height: 90vh;
   border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: linear-gradient(170deg, rgba(12, 34, 50, 0.97), rgba(20, 53, 72, 0.97));
@@ -1107,6 +1108,7 @@ form textarea {
   display: grid;
   gap: 0.7rem;
   padding: 0.9rem;
+  margin: 0 auto;
 }
 
 /* Mobile optimizations for lightbox */
@@ -1116,11 +1118,12 @@ form textarea {
   }
   
   .image-lightbox-panel {
-    width: min(100%, calc(100vw - 1rem));
-    max-height: calc(100vh - 1rem);
+    width: calc(100% - 1rem);
+    max-height: 85vh;
     padding: 0.7rem;
     border-radius: 0.8rem;
     gap: 0.5rem;
+    margin: 0 auto;
   }
   
   .image-lightbox-toolbar {
@@ -1139,21 +1142,25 @@ form textarea {
 
 @media (max-width: 480px) {
   .image-lightbox {
-    padding: 0.3rem;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .image-lightbox-panel {
-    width: 100vw;
-    max-height: 95vh;
-    padding: 0.5rem;
+    width: calc(100vw - 1rem);
+    max-height: 85vh;
+    padding: 0.6rem;
     border-radius: 0.6rem;
     gap: 0.4rem;
+    margin: 0 auto;
   }
   
   .image-lightbox-toolbar {
     flex-direction: column;
     gap: 0.4rem;
-    align-items: stretch;
+    align-items: center;
   }
   
   .image-lightbox-toolbar strong {
@@ -1165,6 +1172,7 @@ form textarea {
     gap: 0.3rem;
     justify-content: center;
     flex-wrap: wrap;
+    width: 100%;
   }
   
   .image-lightbox-actions .btn {
@@ -1174,13 +1182,22 @@ form textarea {
   }
   
   .image-lightbox-frame {
-    max-height: 60vh;
+    max-height: 55vh;
     border-radius: 0.5rem;
+    width: 100%;
+  }
+  
+  .image-lightbox-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0 auto;
   }
   
   .image-lightbox-hint {
     font-size: 0.7rem;
     text-align: center;
+    width: 100%;
   }
 }
 
