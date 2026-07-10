@@ -230,14 +230,58 @@ function isValidImageUrl(value) {
   }
 }
 
+function isHeicImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.endsWith('.heic') || lowerUrl.endsWith('.heif');
+}
+
+function filterHeicImages(imageUrls) {
+  if (!Array.isArray(imageUrls)) return { valid: [], heic: [] };
+  
+  const valid = [];
+  const heic = [];
+  
+  imageUrls.forEach((url) => {
+    if (isHeicImageUrl(url)) {
+      heic.push(url);
+    } else {
+      valid.push(url);
+    }
+  });
+  
+  return { valid, heic };
+}
+
 const MAX_IMAGE_SIZE_MB = 10; // 10 MB máximo
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
+function detectHeicFile(file) {
+  // Check by MIME type
+  if (file.type === 'image/heic' || file.type === 'image/heif' || file.type === 'image/heif-sequence') {
+    return true;
+  }
+  
+  // Check by file extension
+  const filename = file.name.toLowerCase();
+  if (filename.endsWith('.heic') || filename.endsWith('.heif') || filename.endsWith('.heic-sequence')) {
+    return true;
+  }
+  
+  return false;
+}
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     // Validar tamaño del archivo
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       reject(new Error(`image-too-large:${MAX_IMAGE_SIZE_MB}MB`));
+      return;
+    }
+
+    // Detectar HEIC/HEIF (formato de iOS no soportado en web)
+    if (detectHeicFile(file)) {
+      reject(new Error('image-heic-format'));
       return;
     }
 
@@ -272,11 +316,18 @@ function readFileAsDataUrl(file) {
 }
 
 function normalizePlace(place) {
-  const imageUrls = Array.isArray(place.imageUrls)
+  let imageUrls = Array.isArray(place.imageUrls)
     ? place.imageUrls.filter((url) => typeof url === "string" && url)
     : [];
 
-  if (!imageUrls.length && place.imageUrl) {
+  // Filtrar automáticamente imágenes HEIC (no soportadas en web)
+  const { valid, heic } = filterHeicImages(imageUrls);
+  if (heic.length > 0) {
+    console.warn(`Found ${heic.length} unsupported HEIC images in place "${place.name}" - filtering out`);
+  }
+  imageUrls = valid;
+
+  if (!imageUrls.length && place.imageUrl && !isHeicImageUrl(place.imageUrl)) {
     imageUrls.push(place.imageUrl);
   }
 
@@ -301,11 +352,18 @@ function normalizePlace(place) {
 }
 
 function normalizeService(service) {
-  const imageUrls = Array.isArray(service.imageUrls)
+  let imageUrls = Array.isArray(service.imageUrls)
     ? service.imageUrls.filter((url) => typeof url === "string" && url)
     : [];
 
-  if (!imageUrls.length && service.imageUrl) {
+  // Filtrar automáticamente imágenes HEIC (no soportadas en web)
+  const { valid, heic } = filterHeicImages(imageUrls);
+  if (heic.length > 0) {
+    console.warn(`Found ${heic.length} unsupported HEIC images in service "${service.name}" - filtering out`);
+  }
+  imageUrls = valid;
+
+  if (!imageUrls.length && service.imageUrl && !isHeicImageUrl(service.imageUrl)) {
     imageUrls.push(service.imageUrl);
   }
 
@@ -2750,6 +2808,8 @@ function setupInteractions() {
           const match = message.match(/(\d+)MB/);
           const maxSize = match ? match[1] : "10";
           notify(`Imagen muy grande (maximo: ${maxSize}MB)`, "error");
+        } else if (message.includes("image-heic-format")) {
+          notify("Formato HEIC no soportado en web. Convierte la imagen a JPG o PNG en tu iPhone: Fotos > Editar > Compartir como JPG, o usa https://heic2any.herokuapp.com/", "error");
         } else if (message.includes("image-invalid-type")) {
           notify("Formato de imagen no valido. Usa JPG, PNG, GIF o WebP", "error");
         } else if (message.includes("image-read-error")) {
