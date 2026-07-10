@@ -1417,6 +1417,11 @@ form textarea {
     font-size: 0.72rem;
     padding: 0.38rem 0.52rem;
   }
+
+  #moderacion .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 .map-wrap {
