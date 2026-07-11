@@ -191,12 +191,17 @@ function renderInstallBannerContent() {
   }
 
   if (refs.installBannerDescription) {
-    const descriptionKey = mode === "unsupported" ? "install.descriptionUnsupported" : "install.description";
+    const descriptionKey =
+      mode === "unsupported"
+        ? "install.descriptionUnsupported"
+        : mode === "prompt-pending"
+          ? "install.descriptionPending"
+          : "install.description";
     refs.installBannerDescription.textContent = t(descriptionKey);
   }
 
   if (refs.installBtn) {
-    const buttonKey = mode === "prompt" ? "install.cta" : "install.ctaHelp";
+    const buttonKey = mode === "prompt" || mode === "prompt-pending" ? "install.cta" : "install.ctaHelp";
     refs.installBtn.textContent = t(buttonKey);
   }
 
@@ -1980,10 +1985,23 @@ function isDesktopDevice() {
   return !isIOSDevice() && !isAndroidDevice();
 }
 
+function isChromiumInstallBrowser() {
+  const ua = window.navigator.userAgent || "";
+  const isChromiumFamily = /(Chrome|CriOS|EdgA|Edg\/)/i.test(ua);
+  const isExcludedBrowser = /(Firefox|FxiOS|OPR|Opera|UCBrowser|YaBrowser)/i.test(ua);
+  return isChromiumFamily && !isExcludedBrowser;
+}
+
+function canUseAutomaticInstallPrompt() {
+  if (isStandaloneDisplayMode() || isIOSDevice()) return false;
+  return "onbeforeinstallprompt" in window || isChromiumInstallBrowser();
+}
+
 function getInstallMode() {
   if (isStandaloneDisplayMode()) return "installed";
   if (deferredInstallPrompt) return "prompt";
   if (isIOSDevice()) return "ios-manual";
+  if (canUseAutomaticInstallPrompt()) return "prompt-pending";
   return "unsupported";
 }
 
@@ -2021,6 +2039,11 @@ async function promptAppInstall() {
 
   if (mode === "ios-manual") {
     notify(t("install.iosInstructions"), "info");
+    return;
+  }
+
+  if (mode === "prompt-pending") {
+    notify(t("install.pendingPrompt"), "info");
     return;
   }
 
