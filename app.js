@@ -2057,14 +2057,14 @@ async function promptAppInstall() {
   const choiceResult = await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
 
-  hideInstallBanner();
-
   if (choiceResult.outcome === "accepted") {
     clearInstallBannerDismissedAt();
+    hideInstallBanner();
     notify(t("install.success"), "success");
   } else {
-    setInstallBannerDismissedAt(Date.now());
-    notify(t("install.notNow"), "info");
+    clearInstallBannerDismissedAt();
+    showInstallBanner();
+    notify(t("install.promptDismissed"), "info");
   }
 }
 
