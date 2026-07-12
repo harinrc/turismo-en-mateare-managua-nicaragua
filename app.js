@@ -70,6 +70,7 @@ const refs = {
   quickAlerts: document.getElementById("quickAlerts"),
   quickPosts: document.getElementById("quickPosts"),
   quickLocalTime: document.getElementById("quickLocalTime"),
+  quickLocalDate: document.getElementById("quickLocalDate"),
   menuBtn: document.getElementById("menuBtn"),
   mainNav: document.getElementById("mainNav"),
   languageSelect: document.getElementById("languageSelect"),
@@ -1137,10 +1138,12 @@ function renderAlerts() {
 }
 
 function updateMateareLocalTime() {
-  if (!refs.quickLocalTime) return;
+  if (!refs.quickLocalTime || !refs.quickLocalDate) return;
 
   try {
     const locale = state.lang === "en" ? "en-US" : "es-NI";
+    const now = new Date();
+
     const formatter = new Intl.DateTimeFormat(locale, {
       timeZone: MATEARE_TIMEZONE,
       hour: "2-digit",
@@ -1148,9 +1151,21 @@ function updateMateareLocalTime() {
       hour12: state.lang === "en"
     });
 
-    refs.quickLocalTime.textContent = formatter.format(new Date());
+    const dateFormatter = new Intl.DateTimeFormat(locale, {
+      timeZone: MATEARE_TIMEZONE,
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
+
+    const localDate = dateFormatter.format(now);
+    const prettyDate = localDate.charAt(0).toUpperCase() + localDate.slice(1);
+
+    refs.quickLocalTime.textContent = formatter.format(now);
+    refs.quickLocalDate.textContent = prettyDate;
   } catch {
     refs.quickLocalTime.textContent = "--:--";
+    refs.quickLocalDate.textContent = "--";
   }
 }
 

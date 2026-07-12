@@ -665,6 +665,14 @@ a {
   text-shadow: 0 0 18px rgba(78, 227, 168, 0.35);
 }
 
+.hero-local-date {
+  color: #dff9ef;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 12px rgba(130, 245, 197, 0.2);
+}
+
 .hero-local-time-zone {
   display: inline-flex;
   width: fit-content;
