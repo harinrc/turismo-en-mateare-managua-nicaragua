@@ -276,18 +276,23 @@ async function loadUserFavorites(user) {
 }
 
 async function persistUserFavorites() {
-  if (!state.user?.uid) return;
+  if (!state.user?.uid) {
+    return { cloudSaved: false, skipped: true, errorCode: "not-signed-in" };
+  }
 
   saveLocalFavorites(state.user.uid);
 
   if (!state.useFirebase || typeof firebaseClient.setUserFavorites !== "function") {
-    return;
+    return { cloudSaved: false, skipped: true, errorCode: "firebase-disabled" };
   }
 
   try {
     await firebaseClient.setUserFavorites(state.user.uid, getFavoritesPayloadFromState());
+    return { cloudSaved: true, skipped: false, errorCode: "" };
   } catch (error) {
+    const errorCode = String(error?.code || error?.message || "unknown");
     console.warn("Could not save favorites in cloud:", error);
+    return { cloudSaved: false, skipped: false, errorCode };
   }
 }
 
@@ -336,8 +341,19 @@ async function toggleFavorite(entity, itemId) {
   renderCommunityFeed();
   renderFavorites();
 
-  await persistUserFavorites();
-  notify(t(alreadyFavorite ? "favorite.removed" : "favorite.saved"), "success");
+  const syncResult = await persistUserFavorites();
+
+  if (syncResult.cloudSaved) {
+    notify(t(alreadyFavorite ? "favorite.removed" : "favorite.saved"), "success");
+    return;
+  }
+
+  if (syncResult.skipped) {
+    notify(t("favorite.savedLocalOnly"), "info");
+    return;
+  }
+
+  notify(`${t("favorite.savedLocalOnly")} (${syncResult.errorCode})`, "error");
 }
 
 function t(key) {
