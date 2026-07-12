@@ -1117,11 +1117,59 @@ form textarea {
   margin-top: 1rem;
 }
 
+.favorites-feed {
+  margin-top: 1rem;
+}
+
+.favorites-head h3 {
+  margin: 0;
+}
+
+.favorites-head p {
+  margin: 0.3rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.favorites-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.favorite-filter-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(18, 32, 46, 0.2);
+  background: #fff;
+  color: #294459;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.favorite-filter-btn.is-active {
+  background: linear-gradient(135deg, rgba(30, 138, 95, 0.92), rgba(19, 112, 76, 0.92));
+  border-color: rgba(19, 112, 76, 0.95);
+  color: #effdf6;
+}
+
+.favorites-empty {
+  margin: 0.8rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
 .feed-card {
   background: #fff;
   border: 1px solid rgba(18, 32, 46, 0.1);
   border-radius: 0.8rem;
   padding: 0.8rem;
+}
+
+.favorite-card h4 {
+  margin: 0.3rem 0 0;
 }
 
 .feed-card-head {

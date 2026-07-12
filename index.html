@@ -345,6 +345,20 @@
         <h3 data-i18n="publish.feedTitle">Publicaciones comunitarias</h3>
         <div class="cards-grid" id="communityFeed"></div>
       </div>
+
+      <div class="favorites-feed reveal" id="favoritesSection">
+        <div class="favorites-head">
+          <h3 data-i18n="favorite.sectionTitle">Mis favoritos</h3>
+          <p data-i18n="favorite.sectionDescription">Guarda lugares y servicios para volver a encontrarlos rápido.</p>
+        </div>
+        <div class="favorites-controls" role="group" aria-label="Filtros de favoritos">
+          <button class="btn favorite-filter-btn is-active" id="favoritesFilterAll" type="button" data-favorite-filter="all" aria-pressed="true" data-i18n="favorite.filterAll">Todos</button>
+          <button class="btn favorite-filter-btn" id="favoritesFilterPlaces" type="button" data-favorite-filter="place" aria-pressed="false" data-i18n="favorite.filterPlaces">Lugares</button>
+          <button class="btn favorite-filter-btn" id="favoritesFilterServices" type="button" data-favorite-filter="service" aria-pressed="false" data-i18n="favorite.filterServices">Servicios</button>
+        </div>
+        <p class="favorites-empty" id="favoritesEmpty" data-i18n="favorite.emptySignedOut">Inicia sesión para guardar y ver tus favoritos.</p>
+        <div class="cards-grid" id="favoritesList" aria-live="polite"></div>
+      </div>
     </section>
 
     <section class="section" id="mapa">

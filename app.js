@@ -50,12 +50,19 @@ const state = {
   favorites: {
     places: new Set(),
     services: new Set()
-  }
+  },
+  favoriteFilter: "all"
 };
 
 const refs = {
   guideList: document.getElementById("guideList"),
   communityFeed: document.getElementById("communityFeed"),
+  favoritesSection: document.getElementById("favoritesSection"),
+  favoritesList: document.getElementById("favoritesList"),
+  favoritesEmpty: document.getElementById("favoritesEmpty"),
+  favoritesFilterAll: document.getElementById("favoritesFilterAll"),
+  favoritesFilterPlaces: document.getElementById("favoritesFilterPlaces"),
+  favoritesFilterServices: document.getElementById("favoritesFilterServices"),
   searchGuide: document.getElementById("searchGuide"),
   filterCategory: document.getElementById("filterCategory"),
   placeForm: document.getElementById("placeForm"),
@@ -327,6 +334,7 @@ async function toggleFavorite(entity, itemId) {
 
   renderGuides();
   renderCommunityFeed();
+  renderFavorites();
 
   await persistUserFavorites();
   notify(t(alreadyFavorite ? "favorite.removed" : "favorite.saved"), "success");
@@ -1087,6 +1095,122 @@ function renderCommunityFeed() {
     });
 
   refs.quickPosts.textContent = String(visiblePlaces.length + visibleServices.length);
+}
+
+function updateFavoriteFilterButtons() {
+  const buttons = [
+    refs.favoritesFilterAll,
+    refs.favoritesFilterPlaces,
+    refs.favoritesFilterServices
+  ].filter(Boolean);
+
+  buttons.forEach((button) => {
+    const isActive = button.dataset.favoriteFilter === state.favoriteFilter;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function renderFavorites() {
+  if (!refs.favoritesList || !refs.favoritesEmpty) return;
+
+  refs.favoritesList.innerHTML = "";
+  updateFavoriteFilterButtons();
+
+  if (!state.user) {
+    refs.favoritesEmpty.hidden = false;
+    refs.favoritesEmpty.textContent = t("favorite.emptySignedOut");
+    return;
+  }
+
+  const visiblePlaces = getVisiblePlaces();
+  const visibleServices = getVisibleServices();
+
+  const placeMap = new Map(visiblePlaces.map((item) => [item.id, item]));
+  const serviceMap = new Map(visibleServices.map((item) => [item.id, item]));
+
+  const favoritePlaces = [...state.favorites.places]
+    .map((id) => placeMap.get(id))
+    .filter(Boolean)
+    .map((item) => ({ type: "place", item }));
+
+  const favoriteServices = [...state.favorites.services]
+    .map((id) => serviceMap.get(id))
+    .filter(Boolean)
+    .map((item) => ({ type: "service", item }));
+
+  let items = [...favoritePlaces, ...favoriteServices];
+
+  if (state.favoriteFilter === "place") {
+    items = items.filter((entry) => entry.type === "place");
+  }
+
+  if (state.favoriteFilter === "service") {
+    items = items.filter((entry) => entry.type === "service");
+  }
+
+  items = items.sort((a, b) => getCreatedAtMs(b.item) - getCreatedAtMs(a.item));
+
+  if (!items.length) {
+    refs.favoritesEmpty.hidden = false;
+    refs.favoritesEmpty.textContent = t("favorite.empty");
+    return;
+  }
+
+  refs.favoritesEmpty.hidden = true;
+
+  items.forEach(({ type, item }) => {
+    const card = document.createElement("article");
+    card.className = "feed-card favorite-card";
+
+    const imageUrls = item.imageUrls?.length
+      ? item.imageUrls
+      : [item.imageUrl || DEFAULT_PLACE_IMAGE];
+
+    const maybeImage = buildFadeSlideshow(imageUrls, item.name || item.title || "", "feed-thumb");
+    const typeLabel = type === "place" ? t("feed.place") : t("feed.service");
+    const favoriteButton = buildFavoriteButtonMarkup(type, item.id, { compact: true });
+    const meta = type === "place"
+      ? `${t("guide.category")}: ${formatCategory(item.category)}`
+      : `${formatServiceType(item.type)} · ${item.schedule || "-"}`;
+
+    let mapButtons = "";
+    if (Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
+      if (type === "place") {
+        mapButtons = `
+          <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
+            <button class="btn btn-primary" type="button" data-map-route="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
+            <button class="btn btn-map-card" type="button" data-map-view-location-place="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
+          </div>
+        `;
+      } else {
+        mapButtons = `
+          <div class="actions" style="gap: 0.5rem; margin-top: 0.75rem;">
+            <button class="btn btn-primary" type="button" data-map-route-service="${item.id}" style="font-size: 0.8rem;">${t("guide.route")}</button>
+            <button class="btn btn-accent" type="button" data-map-view-location-service="${item.id}" style="font-size: 0.8rem;">${t("map.viewOnMap")}</button>
+          </div>
+        `;
+      }
+    }
+
+    const contactLine = type === "service"
+      ? `<p class="feed-contact">${t("publish.contact")}: ${item.contact || "-"}</p>`
+      : "";
+
+    card.innerHTML = `
+      <div class="feed-card-head">
+        <strong>${typeLabel}</strong>
+        ${favoriteButton}
+      </div>
+      <h4>${item.name || ""}</h4>
+      <p>${meta}</p>
+      ${contactLine}
+      ${maybeImage}
+      ${mapButtons}
+    `;
+
+    refs.favoritesList.appendChild(card);
+  });
 }
 
 function renderAlerts() {
@@ -1969,6 +2093,7 @@ function refreshUiData() {
   syncWeatherSelector();
   redrawMarkers();
   renderCommunityFeed();
+  renderFavorites();
   renderWeather();
   renderModerationPanel();
   updateImageSchema();
@@ -2864,6 +2989,15 @@ function setupInteractions() {
   refs.weatherPlace.addEventListener("change", renderWeather);
   refs.refreshWeather.addEventListener("click", renderWeather);
 
+  [refs.favoritesFilterAll, refs.favoritesFilterPlaces, refs.favoritesFilterServices]
+    .filter(Boolean)
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        state.favoriteFilter = button.dataset.favoriteFilter || "all";
+        renderFavorites();
+      });
+    });
+
   document.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -3073,6 +3207,7 @@ function setupInteractions() {
     applyTranslations();
     renderGuides();
     renderCommunityFeed();
+    renderFavorites();
     renderAlerts();
     renderWeather();
     renderModerationPanel();
