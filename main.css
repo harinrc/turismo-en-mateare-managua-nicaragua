@@ -934,6 +934,40 @@ form textarea {
   text-align: center;
 }
 
+.favorite-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-favorite {
+  border-radius: 999px;
+  border: 1px solid rgba(18, 32, 46, 0.2);
+  background: #fff;
+  color: #294459;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.72rem;
+  min-height: 2.2rem;
+}
+
+.btn-favorite:hover,
+.btn-favorite:focus-visible {
+  border-color: rgba(30, 138, 95, 0.5);
+  box-shadow: 0 0 0 2px rgba(30, 138, 95, 0.15);
+}
+
+.btn-favorite.is-active {
+  background: linear-gradient(135deg, rgba(30, 138, 95, 0.92), rgba(19, 112, 76, 0.92));
+  border-color: rgba(19, 112, 76, 0.95);
+  color: #effdf6;
+}
+
+.btn-favorite.btn-favorite-compact {
+  min-height: 1.9rem;
+  padding: 0.3rem 0.56rem;
+  font-size: 0.72rem;
+}
+
 .weather-alert-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1080,6 +1114,13 @@ form textarea {
   border: 1px solid rgba(18, 32, 46, 0.1);
   border-radius: 0.8rem;
   padding: 0.8rem;
+}
+
+.feed-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
 }
 
 .feed-card p {

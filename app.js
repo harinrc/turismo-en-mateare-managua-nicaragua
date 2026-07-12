@@ -17,6 +17,7 @@ const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
 const HERO_BG_CHANGE_INTERVAL_MS = 8 * 1000;
 const CARD_SLIDE_INTERVAL_SECONDS = 3;
 const MATEARE_TIMEZONE = "America/Managua";
+const FAVORITES_STORAGE_PREFIX = "mateare_favorites_v1_";
 const ALERTS_PRIMARY_SEARCH_QUERIES = [
   "Mateare Managua",
   "Mateare",
@@ -45,7 +46,11 @@ const state = {
   pickingLocationForEditor: false,  // True cuando estamos editando desde admin panel
   user: null,
   isAdmin: false,
-  useFirebase: firebaseClient.enabled
+  useFirebase: firebaseClient.enabled,
+  favorites: {
+    places: new Set(),
+    services: new Set()
+  }
 };
 
 const refs = {
@@ -180,6 +185,150 @@ function shouldSuppressInstallBanner() {
   if (!dismissedAt) return false;
 
   return Date.now() - dismissedAt < INSTALL_BANNER_DISMISS_TTL_MS;
+}
+
+function getFavoritesStorageKey(uid) {
+  return `${FAVORITES_STORAGE_PREFIX}${uid}`;
+}
+
+function sanitizeFavoriteIds(list) {
+  if (!Array.isArray(list)) return [];
+
+  return [...new Set(list.filter((id) => typeof id === "string" && id.trim().length > 0))];
+}
+
+function getFavoritesPayloadFromState() {
+  return {
+    places: [...state.favorites.places],
+    services: [...state.favorites.services]
+  };
+}
+
+function applyFavoritesPayload(payload) {
+  const safePlaces = sanitizeFavoriteIds(payload?.places);
+  const safeServices = sanitizeFavoriteIds(payload?.services);
+
+  state.favorites.places = new Set(safePlaces);
+  state.favorites.services = new Set(safeServices);
+}
+
+function loadLocalFavorites(uid) {
+  if (!uid) return { places: [], services: [] };
+
+  try {
+    const raw = localStorage.getItem(getFavoritesStorageKey(uid));
+    if (!raw) return { places: [], services: [] };
+
+    const parsed = JSON.parse(raw);
+    return {
+      places: sanitizeFavoriteIds(parsed?.places),
+      services: sanitizeFavoriteIds(parsed?.services)
+    };
+  } catch {
+    return { places: [], services: [] };
+  }
+}
+
+function saveLocalFavorites(uid) {
+  if (!uid) return;
+
+  const payload = getFavoritesPayloadFromState();
+  localStorage.setItem(getFavoritesStorageKey(uid), JSON.stringify(payload));
+}
+
+async function loadUserFavorites(user) {
+  if (!user?.uid) {
+    applyFavoritesPayload({ places: [], services: [] });
+    return;
+  }
+
+  const localFavorites = loadLocalFavorites(user.uid);
+  applyFavoritesPayload(localFavorites);
+
+  if (!state.useFirebase || typeof firebaseClient.getUserFavorites !== "function") {
+    return;
+  }
+
+  try {
+    const cloudFavorites = await firebaseClient.getUserFavorites(user.uid);
+    const merged = {
+      places: [...new Set([...localFavorites.places, ...sanitizeFavoriteIds(cloudFavorites?.places)])],
+      services: [...new Set([...localFavorites.services, ...sanitizeFavoriteIds(cloudFavorites?.services)])]
+    };
+
+    applyFavoritesPayload(merged);
+    saveLocalFavorites(user.uid);
+
+    if (typeof firebaseClient.setUserFavorites === "function") {
+      await firebaseClient.setUserFavorites(user.uid, merged);
+    }
+  } catch (error) {
+    console.warn("Could not sync favorites from cloud:", error);
+  }
+}
+
+async function persistUserFavorites() {
+  if (!state.user?.uid) return;
+
+  saveLocalFavorites(state.user.uid);
+
+  if (!state.useFirebase || typeof firebaseClient.setUserFavorites !== "function") {
+    return;
+  }
+
+  try {
+    await firebaseClient.setUserFavorites(state.user.uid, getFavoritesPayloadFromState());
+  } catch (error) {
+    console.warn("Could not save favorites in cloud:", error);
+  }
+}
+
+function isFavorite(entity, itemId) {
+  const id = String(itemId || "");
+  if (!id) return false;
+
+  return entity === "service"
+    ? state.favorites.services.has(id)
+    : state.favorites.places.has(id);
+}
+
+function buildFavoriteButtonMarkup(entity, itemId, options = {}) {
+  const compact = options.compact ?? false;
+  const safeId = escapeHtml(itemId || "");
+  const active = isFavorite(entity, itemId);
+  const actionText = active ? t("favorite.remove") : t("favorite.add");
+  const icon = active ? "★" : "☆";
+  const attr = entity === "service"
+    ? `data-favorite-service="${safeId}"`
+    : `data-favorite-place="${safeId}"`;
+  const classNames = `btn btn-favorite${compact ? " btn-favorite-compact" : ""}${active ? " is-active" : ""}`;
+
+  return `<button class="${classNames}" type="button" ${attr} aria-pressed="${active}" title="${actionText}">${icon} ${actionText}</button>`;
+}
+
+async function toggleFavorite(entity, itemId) {
+  if (!state.user) {
+    notify(t("favorite.signInRequired"), "info");
+    return;
+  }
+
+  const id = String(itemId || "").trim();
+  if (!id) return;
+
+  const favoritesSet = entity === "service" ? state.favorites.services : state.favorites.places;
+  const alreadyFavorite = favoritesSet.has(id);
+
+  if (alreadyFavorite) {
+    favoritesSet.delete(id);
+  } else {
+    favoritesSet.add(id);
+  }
+
+  renderGuides();
+  renderCommunityFeed();
+
+  await persistUserFavorites();
+  notify(t(alreadyFavorite ? "favorite.removed" : "favorite.saved"), "success");
 }
 
 function t(key) {
@@ -832,6 +981,7 @@ function renderGuides() {
 
     const tags = (place.tags ?? []).map((tag) => `<span class="badge">${tag}</span>`).join("");
     const gallery = buildFadeSlideshow(place.imageUrls || [place.imageUrl || DEFAULT_PLACE_IMAGE], place.name);
+    const favoriteButton = buildFavoriteButtonMarkup("place", place.id);
 
     card.innerHTML = `
       ${gallery}
@@ -841,6 +991,7 @@ function renderGuides() {
         <span class="badge">${t("guide.category")}: ${formatCategory(place.category)}</span>
         ${tags}
       </div>
+      <div class="favorite-row">${favoriteButton}</div>
       <div class="actions">
         <button class="btn btn-primary" data-route="${place.id}">${t("guide.route")}</button>
         <button class="btn" data-map="${place.id}">${t("guide.more")}</button>
@@ -918,7 +1069,19 @@ function renderCommunityFeed() {
       }
       
       const typeLabel = item.type === "place" ? t("feed.place") : t("feed.service");
-      card.innerHTML = `<strong>${typeLabel}</strong><h4>${item.title}</h4><p>${item.meta}</p>${statusLine}${contactLine}${maybeImage}${mapButtons}`;
+      const favoriteButton = buildFavoriteButtonMarkup(item.type, item.id, { compact: true });
+      card.innerHTML = `
+        <div class="feed-card-head">
+          <strong>${typeLabel}</strong>
+          ${favoriteButton}
+        </div>
+        <h4>${item.title}</h4>
+        <p>${item.meta}</p>
+        ${statusLine}
+        ${contactLine}
+        ${maybeImage}
+        ${mapButtons}
+      `;
       refs.communityFeed.appendChild(card);
     });
 
@@ -2655,6 +2818,7 @@ function setupFirebaseRealtime() {
   firebaseClient.onAuth(async (user) => {
     state.user = user;
     await syncAdminClaim(user);
+    await loadUserFavorites(user);
     startRealtimeSubscriptions();
     updateAuthUI();
     refreshUiData();
@@ -2685,9 +2849,27 @@ function setupInteractions() {
   refs.weatherPlace.addEventListener("change", renderWeather);
   refs.refreshWeather.addEventListener("click", renderWeather);
 
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    const favoritePlaceButton = target.closest("button[data-favorite-place]");
+    if (favoritePlaceButton instanceof HTMLButtonElement) {
+      const placeId = favoritePlaceButton.getAttribute("data-favorite-place");
+      if (!placeId) return;
+
+      await toggleFavorite("place", placeId);
+      return;
+    }
+
+    const favoriteServiceButton = target.closest("button[data-favorite-service]");
+    if (favoriteServiceButton instanceof HTMLButtonElement) {
+      const serviceId = favoriteServiceButton.getAttribute("data-favorite-service");
+      if (!serviceId) return;
+
+      await toggleFavorite("service", serviceId);
+      return;
+    }
 
     const mapRouteButton = target.closest("button[data-map-route]");
     if (mapRouteButton instanceof HTMLButtonElement) {

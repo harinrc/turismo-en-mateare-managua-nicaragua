@@ -11,6 +11,8 @@ import {
   collection,
   addDoc,
   doc,
+  getDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -207,6 +209,46 @@ export function createFirebaseClient() {
         ...updates,
         updatedAt: serverTimestamp()
       });
+    },
+
+    async getUserFavorites(uid) {
+      const favoritesRef = doc(db, "userFavorites", uid);
+      const snapshot = await getDoc(favoritesRef);
+      const data = snapshot.exists() ? snapshot.data() : {};
+
+      const places = Array.isArray(data.places)
+        ? data.places.filter((id) => typeof id === "string" && id)
+        : [];
+
+      const services = Array.isArray(data.services)
+        ? data.services.filter((id) => typeof id === "string" && id)
+        : [];
+
+      return {
+        places,
+        services
+      };
+    },
+
+    async setUserFavorites(uid, favorites) {
+      const favoritesRef = doc(db, "userFavorites", uid);
+      const places = Array.isArray(favorites?.places)
+        ? favorites.places.filter((id) => typeof id === "string" && id)
+        : [];
+
+      const services = Array.isArray(favorites?.services)
+        ? favorites.services.filter((id) => typeof id === "string" && id)
+        : [];
+
+      return setDoc(
+        favoritesRef,
+        {
+          places,
+          services,
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
     }
   };
 }
