@@ -240,15 +240,11 @@ export function createFirebaseClient() {
         ? favorites.services.filter((id) => typeof id === "string" && id)
         : [];
 
-      return setDoc(
-        favoritesRef,
-        {
-          places,
-          services,
-          updatedAt: serverTimestamp()
-        },
-        { merge: true }
-      );
+      return setDoc(favoritesRef, {
+        places,
+        services,
+        updatedAt: serverTimestamp()
+      });
     }
   };
 }
