@@ -242,8 +242,7 @@ export function createFirebaseClient() {
 
       return setDoc(favoritesRef, {
         places,
-        services,
-        updatedAt: serverTimestamp()
+        services
       });
     }
   };

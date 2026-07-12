@@ -1,4 +1,4 @@
-const CACHE_NAME = "mateare-vivo-v26";
+const CACHE_NAME = "mateare-vivo-v27";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -13,16 +13,23 @@ const APP_SHELL = [
   "./icon-512.svg"
 ];
 
-const NETWORK_FIRST_PATHS = new Set([
-  "/turismo-en-mateare-managua-nicaragua/",
-  "/turismo-en-mateare-managua-nicaragua/index.html",
-  "/turismo-en-mateare-managua-nicaragua/main.css",
-  "/turismo-en-mateare-managua-nicaragua/app.js",
-  "/turismo-en-mateare-managua-nicaragua/content.js",
-  "/turismo-en-mateare-managua-nicaragua/firebase.js",
-  "/turismo-en-mateare-managua-nicaragua/firebase-config.js",
-  "/turismo-en-mateare-managua-nicaragua/manifest.json"
+const NETWORK_FIRST_FILES = new Set([
+  "index.html",
+  "main.css",
+  "app.js",
+  "content.js",
+  "firebase.js",
+  "firebase-config.js",
+  "manifest.json"
 ]);
+
+function isNetworkFirstPath(pathname) {
+  if (!pathname || pathname === "/") return true;
+
+  const normalized = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const fileName = normalized.split("/").pop() || "";
+  return NETWORK_FIRST_FILES.has(fileName);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -72,7 +79,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (NETWORK_FIRST_PATHS.has(url.pathname)) {
+  if (isNetworkFirstPath(url.pathname)) {
     event.respondWith(
       fetch(request)
         .then((response) => {
