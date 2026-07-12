@@ -16,6 +16,7 @@ const ALERTS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const ALERTS_MIN_UPDATE_GAP_MS = 2 * 60 * 1000;
 const HERO_BG_CHANGE_INTERVAL_MS = 8 * 1000;
 const CARD_SLIDE_INTERVAL_SECONDS = 3;
+const MATEARE_TIMEZONE = "America/Managua";
 const ALERTS_PRIMARY_SEARCH_QUERIES = [
   "Mateare Managua",
   "Mateare",
@@ -63,6 +64,7 @@ const refs = {
   quickWeather: document.getElementById("quickWeather"),
   quickAlerts: document.getElementById("quickAlerts"),
   quickPosts: document.getElementById("quickPosts"),
+  quickLocalTime: document.getElementById("quickLocalTime"),
   menuBtn: document.getElementById("menuBtn"),
   mainNav: document.getElementById("mainNav"),
   languageSelect: document.getElementById("languageSelect"),
@@ -137,6 +139,7 @@ let alertsLastSuccessAt = 0;
 let alertsSyncState = "idle";
 let heroBgTimer = null;
 let heroBgCurrentIndex = 0;
+let localTimeTimer = null;
 let deferredInstallPrompt = null;
 let lightboxScale = 1;
 let lightboxImages = [];
@@ -707,6 +710,7 @@ function applyTranslations() {
   updateAuthUI();
   renderAlertsSyncStatus();
   renderInstallBannerContent();
+  updateMateareLocalTime();
 }
 
 function formatSyncDateTime(timestampMs) {
@@ -967,6 +971,34 @@ function renderAlerts() {
 
   refs.quickAlerts.textContent = String(state.alerts.length);
   renderAlertsSyncStatus();
+}
+
+function updateMateareLocalTime() {
+  if (!refs.quickLocalTime) return;
+
+  try {
+    const locale = state.lang === "en" ? "en-US" : "es-NI";
+    const formatter = new Intl.DateTimeFormat(locale, {
+      timeZone: MATEARE_TIMEZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: state.lang === "en"
+    });
+
+    refs.quickLocalTime.textContent = formatter.format(new Date());
+  } catch {
+    refs.quickLocalTime.textContent = "--:--";
+  }
+}
+
+function startMateareLocalClock() {
+  updateMateareLocalTime();
+
+  if (localTimeTimer) {
+    clearInterval(localTimeTimer);
+  }
+
+  localTimeTimer = setInterval(updateMateareLocalTime, 30000);
 }
 
 function stripHtml(value) {
@@ -3064,6 +3096,7 @@ function boot() {
   handleForms();
   setupRevealOnScroll();
   initMap();
+  startMateareLocalClock();
 
   if (state.useFirebase) {
     // Avoid showing seed/demo content before realtime data arrives.

@@ -651,6 +651,33 @@ a {
   font-size: 1.25rem;
 }
 
+.hero-local-time-item {
+  border-left-color: rgba(46, 201, 142, 0.82);
+  background: linear-gradient(120deg, rgba(30, 138, 95, 0.2), rgba(15, 42, 61, 0.18));
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.7rem;
+}
+
+#quickLocalTime {
+  color: #8ef3cd;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 18px rgba(78, 227, 168, 0.35);
+}
+
+.hero-local-time-zone {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.2rem;
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #c8f8e5;
+  background: rgba(20, 95, 60, 0.5);
+  border: 1px solid rgba(144, 241, 201, 0.38);
+}
+
 .section-head {
   max-width: 70ch;
 }
