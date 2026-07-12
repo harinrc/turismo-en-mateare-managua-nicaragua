@@ -244,6 +244,20 @@ function saveLocalFavorites(uid) {
   localStorage.setItem(getFavoritesStorageKey(uid), JSON.stringify(payload));
 }
 
+async function ensureFreshUserToken(user) {
+  if (!user || typeof user.getIdToken !== "function") {
+    return { ok: false, reason: "missing-user" };
+  }
+
+  try {
+    await user.getIdToken(true);
+    return { ok: true, reason: "" };
+  } catch (error) {
+    const reason = String(error?.code || error?.message || "token-refresh-failed");
+    return { ok: false, reason };
+  }
+}
+
 async function loadUserFavorites(user) {
   if (!user?.uid) {
     applyFavoritesPayload({ places: [], services: [] });
@@ -258,6 +272,12 @@ async function loadUserFavorites(user) {
   }
 
   try {
+    const tokenCheck = await ensureFreshUserToken(user);
+    if (!tokenCheck.ok) {
+      console.warn("Could not refresh auth token before reading favorites:", tokenCheck.reason);
+      return;
+    }
+
     const cloudFavorites = await firebaseClient.getUserFavorites(user.uid);
     const merged = {
       places: [...new Set([...localFavorites.places, ...sanitizeFavoriteIds(cloudFavorites?.places)])],
@@ -287,12 +307,23 @@ async function persistUserFavorites() {
   }
 
   try {
+    const tokenCheck = await ensureFreshUserToken(state.user);
+    if (!tokenCheck.ok) {
+      return {
+        cloudSaved: false,
+        skipped: false,
+        errorCode: `auth-token:${tokenCheck.reason}`
+      };
+    }
+
     await firebaseClient.setUserFavorites(state.user.uid, getFavoritesPayloadFromState());
     return { cloudSaved: true, skipped: false, errorCode: "" };
   } catch (error) {
     const errorCode = String(error?.code || error?.message || "unknown");
+    const errorMessage = String(error?.message || "");
+    const details = errorMessage ? `${errorCode} | ${errorMessage}` : errorCode;
     console.warn("Could not save favorites in cloud:", error);
-    return { cloudSaved: false, skipped: false, errorCode };
+    return { cloudSaved: false, skipped: false, errorCode: details };
   }
 }
 
