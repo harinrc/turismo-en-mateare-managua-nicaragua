@@ -384,7 +384,10 @@ async function toggleFavorite(entity, itemId) {
     return;
   }
 
-  notify(`${t("favorite.savedLocalOnly")} (${syncResult.errorCode})`, "error");
+  if (syncResult.errorCode) {
+    console.warn("Favorites cloud sync failed:", syncResult.errorCode);
+  }
+  notify(t("favorite.savedLocalOnly"), "info");
 }
 
 function t(key) {
