@@ -1644,6 +1644,14 @@ form textarea {
   transform: translateY(0) scale(1);
 }
 
+/* Keep moderation content always visible; reveal animation caused hidden admin cards. */
+#moderacion .reveal,
+#moderacion .reveal.is-visible {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
 @keyframes drift {
   0% {
     transform: translate3d(0, 0, 0);
